@@ -20,11 +20,9 @@ int max_new_edges,curandState *state,int *NN_LIST,int *NEW_LIST,int *NEW_LIST_IN
        
         CHECK_VISITED(NEW_LIST,NEW_LIST_INDX,i,random);
         int pos;  
-        int r;
 
         __shared__ double prob[(c_l)*4];
         while(j<N-1){
-            int kas=0;
             loc_act=NEW_LIST[i*(N+1)+NEW_LIST[i*(N+1)+N]]; //locacion actual
              //se marca como visitada
             prob[id*cl]=HEURISTIC_PHEROMONE[loc_act*cl]*(1-(int)(IS_VISITED(NEW_LIST,NEW_LIST_INDX,i,NN_LIST[loc_act*cl]))); //si fue visitada la probabilidad es 0
@@ -38,7 +36,6 @@ int max_new_edges,curandState *state,int *NN_LIST,int *NEW_LIST,int *NEW_LIST_IN
             for (int ran=0;ran<cl;ran++){
                 if (ranval<=prob[id*cl+ran]){
                     CHOSEN_NODE=NN_LIST[loc_act*cl+ran]; //revisar indices
-                    kas=1;// Quesooo, atento cuando se cumple esta condicion
                     break;
                 }
             }
@@ -166,7 +163,7 @@ double *PHEROMONE_MATRIX,int *NN_LIST,int *COST,int *OPTIMAL_ROUTE,
 int BEST_GLOBAL_SOLUTION){
     int j=threadIdx.x+ (blockIdx.x * blockDim.x);
     if (j<N){
-    int ant,k;
+    int k;
     for (k=0;k<cl;k++){
         if (OPTIMAL_ROUTE[j+1]==NN_LIST[OPTIMAL_ROUTE[j]*cl+k]){
             PHEROMONE_MATRIX[OPTIMAL_ROUTE[j]*cl+k]+=1.0/((double)BEST_GLOBAL_SOLUTION);
@@ -375,4 +372,26 @@ __device__ void opt3(int *ROUTE,double *NODE_COORDINATE_2D,int *COST,int k,int *
     COST[k]+=change7;if(COST[k]<solucion)printf("\n HAY QUESO 7\n");
     }
     //printf("\n");
+}
+
+void make_candidate_list(int *d_NN_LIST_aux,int *d_DISTANCE_NODE,int *DISTANCE_NODE,double *NODE_COORDINATE_2D,int *NN_LIST_cl){
+    int i,j;
+    thrust::device_ptr<int> dev_inx_d = thrust::device_pointer_cast(d_NN_LIST_aux);
+    thrust::device_ptr<int> dev_d = thrust::device_pointer_cast(d_DISTANCE_NODE);
+    for (i=0;i<N;i++){
+        if (i%1000==0){
+            printf("%d \n",i);
+        }
+        for (j=0;j<N;j++){
+            DISTANCE_NODE[j]= EUC_2D_C(NODE_COORDINATE_2D,i,j); 
+        }
+        cudaMemcpy(d_DISTANCE_NODE,DISTANCE_NODE,N*sizeof(int),cudaMemcpyHostToDevice);
+        thrust::sequence(thrust::device,dev_inx_d, dev_inx_d+N); // se ordenan de menor distancia a mayor distancia
+        thrust::sort_by_key(thrust::device,dev_d, dev_d +N, dev_inx_d,thrust::less<int>());
+        cudaDeviceSynchronize();
+        cudaMemcpy(NN_LIST_cl+i*cl,d_NN_LIST_aux+1,cl*sizeof(int),cudaMemcpyDeviceToHost);
+        
+        //cudaMemcpy(NN_LIST_cl,d_NN_LIST_aux+1,cl*N*sizeof(int),cudaMemcpyDeviceToHost);
+        
+    }
 }

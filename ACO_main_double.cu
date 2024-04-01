@@ -30,42 +30,36 @@ int main(){
     int *d_NN_LIST_aux;cudaMalloc( (void **) &d_NN_LIST_aux, (N)*sizeof( int ));
     int *d_NN_LIST_cl;cudaMalloc( (void **) &d_NN_LIST_cl, (N*cl)*sizeof( int ));
     int *NN_LIST_cl;NN_LIST_cl=(int*)calloc(N*c_l,sizeof(int));
-    lectura_2(NODE_COORDINATE_2D);
-    printf("\n termine de leer");
+    lectura_2(NODE_COORDINATE_2D); //this  could be optimized
     int i,j;
-    thrust::device_ptr<int> dev_inx_d = thrust::device_pointer_cast(d_NN_LIST_aux);
-    thrust::device_ptr<int> dev_d = thrust::device_pointer_cast(d_DISTANCE_NODE);
-    for (i=0;i<N;i++){
-        if (i%1000==0){
-            printf("%d \n",i);
-        }
-        for (j=0;j<N;j++){
-            DISTANCE_NODE[j]= EUC_2D_C(NODE_COORDINATE_2D,i,j); 
-        }
-        cudaMemcpy(d_DISTANCE_NODE,DISTANCE_NODE,N*sizeof(int),cudaMemcpyHostToDevice);
-        thrust::sequence(thrust::device,dev_inx_d, dev_inx_d+N); // se ordenan de menor distancia a mayor distancia
-        thrust::sort_by_key(thrust::device,dev_d, dev_d +N, dev_inx_d,thrust::less<int>());
-        cudaDeviceSynchronize();
-        cudaMemcpy(NN_LIST_cl+i*cl,d_NN_LIST_aux+1,cl*sizeof(int),cudaMemcpyDeviceToHost);
-        
-        //cudaMemcpy(NN_LIST_cl,d_NN_LIST_aux+1,cl*N*sizeof(int),cudaMemcpyDeviceToHost);
-        
-    }
+
+    printf("\n termine de leer");
+    
+    make_candidate_list(d_NN_LIST_aux,d_DISTANCE_NODE,DISTANCE_NODE,NODE_COORDINATE_2D,NN_LIST_cl); //this could be optimized. 
+    
+    
     printf("\n termine de ordenar");
     cudaMemcpy(d_NN_LIST_cl,NN_LIST_cl,N*cl*sizeof(int),cudaMemcpyHostToDevice);
+
+
     double alpha=0.3;
     double beta=5;
     double e=0.01;
     
-    int *vec_soultion;double prom_time_2=0;int *vec_iter;int exito=0;double *vec_warm_up_time;
-    vec_soultion= (int* )malloc(N_e*sizeof(int));vec_iter= (int* )malloc(N_e*sizeof(int)); //vectores para estadistica
+    int *vec_soultion;vec_soultion= (int* )malloc(N_e*sizeof(int));
+    int *vec_iter;vec_iter= (int* )malloc(N_e*sizeof(int)); //vectores para estadistica
+    double *vec_warm_up_time;vec_warm_up_time= (double* )malloc(N_e*sizeof(double));
+    double prom_time_2=0;
     double *vec_iteration_time;vec_iteration_time=(double*)malloc(N_e*sizeof(double));
-    memset(vec_soultion,0,N_e*sizeof(int));vec_warm_up_time= (double* )malloc(N_e*sizeof(double));
+    memset(vec_soultion,0,N_e*sizeof(int));
     double *vec_ant_iteration_time_series;vec_ant_iteration_time_series=(double*)malloc(ITERACION*sizeof(double));
+
     for (i=0;i<ITERACION;i++)vec_ant_iteration_time_series[i]=0.0;
     int x;
     float elapsed_for_gpu_ant[N_GPU];
-    
+    /*
+    Run N_e experiments of ant colony
+    */
     for (x=0;x<N_e;x++){
         cudaEvent_t start_events[N_GPU];
         int *HORMIGAS_COSTO;HORMIGAS_COSTO=(int*)malloc(ITERACION*M*N_GPU*sizeof(int));
@@ -93,7 +87,7 @@ int main(){
         /*6 MASTER GPU VARIABLES*/
         double *HEURISTIC_PHEROMONE;
         bool *VISITED_LIST;
-        int *GLOBAL_ROUTE,*OPTIMAL_ROUTE,*GLOBAL_COST,*BEST_ANT;
+        int *OPTIMAL_ROUTE,*GLOBAL_COST,*BEST_ANT;
         int *PREDECESSOR_ROUTE, *SUCCESSOR_ROUTE;
         double *d_NODE_COORDINATE_2D;
         curandState *d_state[N_GPU];
@@ -187,7 +181,6 @@ int main(){
         // ITERACIONES 
 
         int num_gpus;
-        size_t freee, total;
         cudaGetDeviceCount( &num_gpus );
         
         cudaSetDevice(0);
@@ -220,12 +213,7 @@ int main(){
             cudaDeviceSynchronize();
             double end_1 =omp_get_wtime();
             cudaMemcpy(HORMIGAS_COSTO+it*N_GPU*M,GLOBAL_COST,N_GPU*M*sizeof(int),cudaMemcpyHostToHost);
-            
-            /*
-            for (i=0;i<N;i++){
-                printf("%d ",NEW_LIST_GLOBAL[63*(N+1)+N-1-i]-GLOBAL_ROUTE[63*(N+1)+i]);
-            }*/
-            
+
             if(it==0)vec_warm_up_time[x]=(end_1-begin_1)*1000;
             vec_ant_iteration_time_series[it]+=((end_1-begin_1)*1000.0)/((double)N_e);
             
@@ -233,8 +221,6 @@ int main(){
             /*
             for(i = 0; i < 4; i++)
                 {
-                    //the end_event must have happened to get a valid duration
-                    //In this example, this is true because of previous device synchronization
                     cudaEventElapsedTime(&elapsed_for_gpu_ant[i], start_events[i], end_events[i]);
                     printf("Elapsed time on device %d: %f ms\n", i, elapsed_for_gpu_ant[i]);
                 }
@@ -313,11 +299,7 @@ int main(){
             
             
             cudaMemcpy(HEURISTIC_PHEROMONE,d_HEURISTIC_PHEROMONE,(N*c_l)*sizeof(double),cudaMemcpyDeviceToHost);
-            /*
-            for (i=0;i<N;i++){
-                printf("\n");
-                for (j=0;j<cl;j++)printf("\n %.16lf",HEURISTIC_PHEROMONE[i*cl+j]);
-            }*/
+
             for (i=0;i<N_GPU;i++){
                 cudaSetDevice(i);
                 cudaMemcpy(d_HEURISTIC_PHEROMONE_MGPU[i],HEURISTIC_PHEROMONE,(N*c_l)*sizeof(double),cudaMemcpyHostToDevice);

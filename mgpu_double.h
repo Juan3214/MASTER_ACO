@@ -18,7 +18,7 @@
 #include <thrust/fill.h>
 #define N_GPU 2
 #define N_e 1
-#define ITERACION 10000
+#define ITERACION 1000
 #define M 1024    //a partir de 512 si duplico 
 #define n_new_edge 8
 #define Q 1 // 
@@ -72,6 +72,7 @@ int rutainicial(int *rute_op,double *d,bool *lista_vis);
 /*
 * This function join the 4 gpu cost vectors
 */
+void make_candidate_list(int *d_NN_LIST_aux,int *d_DISTANCE_NODE,int *DISTANCE_NODE,double *NODE_COORDINATE_2D,int *NN_LIST_cl);
 __global__ void LIST_INIT(int *NEW_LIST,int *d_NEW_LIST_INDX);
 __global__ void PHEROMONE_UPDATE_MMAS(int *ROUTE,int *BEST_ANT,
 double *PHEROMONE_MATRIX,int *NN_LIST,int *COST,int *OPTIMAL_ROUTE,
