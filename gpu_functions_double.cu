@@ -1,4 +1,4 @@
-#include "mgpu_2.h"
+#include "mgpu_double.h"
 //no necesito list local search particular por gpu . borrar
 // LOCAL SEARCH LIST GUARDA POSICION EN LA RUTA, NO VERTICES
 __global__ void iniciar_kernel(curandState *state,int di){
@@ -13,7 +13,7 @@ int max_new_edges,curandState *state,int *NN_LIST,int *NEW_LIST,int *NEW_LIST_IN
     if (i<M){
         int loc_act;int j=0;int new_edges=0;
         curandState localstate=state[i];
-        float myrandf = curand_uniform(&localstate);
+        double myrandf = curand_uniform(&localstate);
         myrandf *= (N-2 + 0.999999);
         myrandf += 0;
         int random = (int)truncf(myrandf);
@@ -229,7 +229,7 @@ __device__ void opt3(int *ROUTE,double *NODE_COORDINATE_2D,int *COST,int k,int *
         int aux =0;
         while (aux==0){
             aux=1;
-            float myrandf = curand_uniform(&localstate);
+            double myrandf = curand_uniform(&localstate);
             myrandf *= (N-2 - 1 + 0.999999);
             myrandf += 1;
             int random = (int)truncf(myrandf);

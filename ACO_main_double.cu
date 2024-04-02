@@ -10,7 +10,7 @@
 #include <omp.h>
 #include <thrust/sort.h>
 #include <thrust/fill.h>
-#include "mgpu_2.h"
+#include "mgpu_double.h"
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
 {
@@ -217,7 +217,7 @@ int main(){
             if(it==0)vec_warm_up_time[x]=(end_1-begin_1)*1000;
             vec_ant_iteration_time_series[it]+=((end_1-begin_1)*1000.0)/((double)N_e);
             
-            //printf("\n termino el recorrido en %lf ms\n",(end_1-begin_1)*1000);
+            printf("\n termino el recorrido en %lf ms\n",(end_1-begin_1)*1000);
             /*
             for(i = 0; i < 4; i++)
                 {

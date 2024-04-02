@@ -5,6 +5,7 @@
 #ifndef MGPU_H_
 #define MGPU_H_
 #include <iostream>
+#include <string.h>
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
@@ -12,7 +13,6 @@
 #include <time.h>
 #include <cuda.h>
 #include <curand_kernel.h>
-#include <float.h>
 #include <thrust/device_ptr.h>
 #include <thrust/sort.h>
 #include <thrust/fill.h>
@@ -23,17 +23,18 @@
 #define n_new_edge 8
 #define Q 1 // 
 #define n_best 10
-#define N 1291
+#define N 49837
 #define LS_ITERATION N
 #define c_l 80
 #define cl 80
-#define name_e "problems/d1291.tsp"
-#define name_test_1 "iteration_time/interation_time_d1291.csv"
-#define name_test_2 "iteration_time_series/interation_time_d1291.csv"
-#define name_test_3 "warm_up_time/warm_up_time_d1291.txt"
-#define name_test_4 "soluciones/soluciones_d1291.csv"
-#define name_test_5 "hormigas/recorridos_d1291.csv"
-#define name_test_6 "hormigas/metricas_d1291.csv"
+#define problem "lra498378" //solo hay que cambiar este
+#define name_e "problems/"
+#define name_test_1 "iteration_time/interation_time_"
+#define name_test_2 "iteration_time_series/interation_time_"
+#define name_test_3 "warm_up_time/warm_up_time_"
+#define name_test_4 "soluciones/soluciones_"
+#define name_test_5 "hormigas/recorridos_"
+#define name_test_6 "hormigas/metricas_"
 #define solucion 426 //eil51
 //mona-lisa100K
 //#define solucion 7542.0 //berlin52
@@ -52,16 +53,16 @@
 void lectura_2(double *dis);
 //-------------------------------------------------------------------------------------
 void escribir_costo(int *HORMIGAS_COSTOS,int x);
-void save_c1_and_c2(float c_1,float c_2,int it, int x);
-float first_metric(int *GLOBAL_COST);
-float second_metric(int *GLOBAL_COST,int best_global);
+void save_c1_and_c2(double c_1,double c_2,int it, int x);
+double first_metric(int *GLOBAL_COST);
+double second_metric(int *GLOBAL_COST,int best_global);
 void guardar_warm_up(double *time,double alpha,double beta,double e);
 void guardar_iteration_time(double *time,double alpha,double beta,double e);
 void guardar_soluciones(int *soluciones,double alpha,double beta,double e);
 void guardar_iteration_time_series(double *time,double alpha,double beta,double e);
-float std_vec(float *vec, float prom);
-float std_vec_it(int *vec,float prom);
-float minimovec(float *vec);
+double std_vec(double *vec, double prom);
+double std_vec_it(int *vec,double prom);
+double minimovec(double *vec);
 
 int EUC_2D_C(double *d_d,int p1,int p2);
 int rutainicial(int *rute_op,double *d,bool *lista_vis);

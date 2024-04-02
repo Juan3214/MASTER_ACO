@@ -10,7 +10,7 @@
 #include <omp.h>
 #include <thrust/sort.h>
 #include <thrust/fill.h>
-#include "mgpu_2.h"
+#include "mgpu.h"
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
 {
@@ -186,7 +186,7 @@ int main(){
         cudaSetDevice(0);
         printf("\n INICIANDO ITERACIONES\n");
         for (it=0;it<ITERACION;it++){
-            float begin_1 =omp_get_wtime();
+            double begin_1 =omp_get_wtime();
             #pragma omp parallel for num_threads(N_GPU)
             for (i=0;i<N_GPU;i++){
                 cudaSetDevice(i);
@@ -211,13 +211,13 @@ int main(){
 
             }
             cudaDeviceSynchronize();
-            float end_1 =omp_get_wtime();
+            double end_1 =omp_get_wtime();
             cudaMemcpy(HORMIGAS_COSTO+it*N_GPU*M,GLOBAL_COST,N_GPU*M*sizeof(int),cudaMemcpyHostToHost);
 
             if(it==0)vec_warm_up_time[x]=(end_1-begin_1)*1000;
             vec_ant_iteration_time_series[it]+=((end_1-begin_1)*1000.0)/((float)N_e);
             
-            //printf("\n termino el recorrido en %f ms\n",(end_1-begin_1)*1000);
+            printf("\n termino el recorrido en %lf ms\n",(end_1-begin_1)*1000);
             /*
             for(i = 0; i < 4; i++)
                 {

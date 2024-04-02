@@ -1,4 +1,4 @@
-#include "mgpu_2.h"
+#include "mgpu.h"
 //no necesito list local search particular por gpu . borrar
 // LOCAL SEARCH LIST GUARDA POSICION EN LA RUTA, NO VERTICES
 __global__ void iniciar_kernel(curandState *state,int di){
@@ -394,4 +394,7 @@ void make_candidate_list(int *d_NN_LIST_aux,int *d_DISTANCE_NODE,int *DISTANCE_N
         //cudaMemcpy(NN_LIST_cl,d_NN_LIST_aux+1,cl*N*sizeof(int),cudaMemcpyDeviceToHost);
         
     }
+}
+
+void make_initial_solution(){
 }

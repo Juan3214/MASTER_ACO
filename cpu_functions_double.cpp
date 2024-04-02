@@ -1,10 +1,16 @@
-#include "mgpu_2.h"
+#include "mgpu_double.h"
 void lectura_2(double *dis){
     FILE* f;
     int height, width, ii, jj;
     char buff[100]; 
-    if((f = fopen(name_e, "r")) == NULL)
+    std::string file_name = name_e;
+    file_name+=problem;
+    file_name+=".tsp";
+    if((f = fopen(file_name.c_str(), "r")) == NULL){
+        printf("\n queso \n");
         exit(1);    
+    }
+
     for (ii=0;ii<6;ii++){
         fscanf(f,"%[^\n]\n",&buff);
         printf("%s\n" ,buff);
@@ -17,7 +23,10 @@ void lectura_2(double *dis){
 }
 void guardar_iteration_time(double *time,double alpha,double beta,double e){
     FILE *file1;
-    file1 = fopen(name_test_1, "a");
+    std::string file_name = name_test_1;
+    file_name+=problem;
+    file_name+=".csv";
+    file1 = fopen(file_name.c_str(), "a");
     if(file1 == NULL)
     {
         printf("Error opening file, to write to it."); //archivo para guardar las iteraciones 
@@ -39,7 +48,10 @@ void guardar_iteration_time(double *time,double alpha,double beta,double e){
 }
 void guardar_iteration_time_series(double *time,double alpha,double beta,double e){
     FILE *file1; 
-    file1 = fopen(name_test_2, "a");
+    std::string file_name = name_test_2;
+    file_name+=problem;
+    file_name+=".csv";
+    file1 = fopen(file_name.c_str(), "a");
     int i;
     if(file1 == NULL)
     {
@@ -61,7 +73,10 @@ void guardar_iteration_time_series(double *time,double alpha,double beta,double 
 }
 void guardar_warm_up(double *time,double alpha,double beta,double e){
     FILE *file1;
-    file1 = fopen(name_test_3, "a");
+    std::string file_name = name_test_3;
+    file_name+=problem;
+    file_name+=".csv";
+    file1 = fopen(file_name.c_str(), "a");
     if(file1 == NULL)
     {
         printf("Error opening file, to write to it."); //archivo para guardar las iteraciones 
@@ -83,7 +98,10 @@ void guardar_warm_up(double *time,double alpha,double beta,double e){
 }
 void guardar_soluciones(int *soluciones,double alpha,double beta,double e){
     FILE *file1;
-    file1 = fopen(name_test_4, "a");
+    std::string file_name = name_test_4;
+    file_name+=problem;
+    file_name+=".csv";
+    file1 = fopen(file_name.c_str(), "a");
     if(file1 == NULL)
     {
         printf("Error opening file, to write to it."); //archivo para guardar las iteraciones 
@@ -100,6 +118,50 @@ void guardar_soluciones(int *soluciones,double alpha,double beta,double e){
             }
         }
         fprintf(file1,"\n");
+    }
+    fclose(file1);
+}
+void escribir_costo(int *HORMIGAS_COSTOS,int x){
+    FILE *file1;
+    std::string file_name = name_test_5;
+    file_name+=problem;
+    file_name+=".csv";
+    file1 = fopen(file_name.c_str(), "a");
+    if(file1 == NULL)
+    {
+        printf("Error opening file, to write to it."); //archivo para guardar las iteraciones 
+    }
+    else
+    {
+        for (int it=0;it<ITERACION;it++){
+            fprintf(file1,"%d,",x);
+            for (int i=0;i<4*M;i++){
+                if (i==0){
+                    fprintf(file1,"%d,%d",it,HORMIGAS_COSTOS[i+N_GPU*M*it]);
+                }
+                else{
+                    fprintf(file1,",%d",HORMIGAS_COSTOS[i+N_GPU*M*it]);
+                }
+            }
+            fprintf(file1,"\n");
+        }
+        
+    }
+    fclose(file1);
+}
+void save_c1_and_c2(double c_1,double c_2,int it, int x){
+    FILE *file1;
+    std::string file_name = name_test_6;
+    file_name+=problem;
+    file_name+=".csv";
+    file1 = fopen(file_name.c_str(), "a");
+    if(file1 == NULL)
+    {
+        printf("Error opening file, to write to it."); //archivo para guardar las iteraciones 
+    }
+    else
+    {
+        fprintf(file1,"%d,%d,%0.7f,%0.7f\n",x,it,c_1,c_2);
     }
     fclose(file1);
 }
@@ -329,57 +391,20 @@ double opt33(int *rute_op,int *rute_op_aux,double *d,double global_sol){
     //printf("\n");
     return global_sol;
 }
-void escribir_costo(int *HORMIGAS_COSTOS,int x){
-    FILE *file1;
-    file1 = fopen(name_test_5, "a");
-    if(file1 == NULL)
-    {
-        printf("Error opening file, to write to it."); //archivo para guardar las iteraciones 
-    }
-    else
-    {
-        for (int it=0;it<ITERACION;it++){
-            fprintf(file1,"%d,",x);
-            for (int i=0;i<4*M;i++){
-                if (i==0){
-                    fprintf(file1,"%d,%d",it,HORMIGAS_COSTOS[i+N_GPU*M*it]);
-                }
-                else{
-                    fprintf(file1,",%d",HORMIGAS_COSTOS[i+N_GPU*M*it]);
-                }
-            }
-            fprintf(file1,"\n");
-        }
-        
-    }
-    fclose(file1);
-}
-float first_metric(int *GLOBAL_COST){
-    float sum_1=0.0;
+
+double first_metric(int *GLOBAL_COST){
+    double sum_1=0.0;
     for (int i=0;i<N_GPU*M;i++)
-        sum_1+=(float)(GLOBAL_COST[i]-GLOBAL_COST[0]);
-    sum_1/=(float)(N_GPU*M);
-    sum_1/=(float)GLOBAL_COST[0];
+        sum_1+=(double)(GLOBAL_COST[i]-GLOBAL_COST[0]);
+    sum_1/=(double)(N_GPU*M);
+    sum_1/=(double)GLOBAL_COST[0];
     return sum_1;
 }
-float second_metric(int *GLOBAL_COST,int best_global){
-    float sum_1=0.0;
+double second_metric(int *GLOBAL_COST,int best_global){
+    double sum_1=0.0;
     for (int i=0;i<N_GPU*M;i++)
-        sum_1+=(float)(GLOBAL_COST[i]-best_global);
-    sum_1/=(float)(N_GPU*M);
-    sum_1/=(float)best_global;
+        sum_1+=(double)(GLOBAL_COST[i]-best_global);
+    sum_1/=(double)(N_GPU*M);
+    sum_1/=(double)best_global;
     return sum_1;
-}
-void save_c1_and_c2(float c_1,float c_2,int it, int x){
-    FILE *file1;
-    file1 = fopen(name_test_6, "a");
-    if(file1 == NULL)
-    {
-        printf("Error opening file, to write to it."); //archivo para guardar las iteraciones 
-    }
-    else
-    {
-        fprintf(file1,"%d,%d,%0.7f,%0.7f\n",x,it,c_1,c_2);
-    }
-    fclose(file1);
 }
