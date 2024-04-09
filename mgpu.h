@@ -18,24 +18,24 @@
 #include <thrust/sort.h>
 #include <thrust/fill.h>
 #define N_GPU 2
-#define N_e 1
-#define ITERACION 1000
+#define N_e 5
+#define ITERACION 3000
 #define M 1024    //a partir de 512 si duplico 
 #define n_new_edge 8
 #define Q 1 // 
 #define n_best 10
-#define N 1000
+#define N 442
 #define LS_ITERATION 0
 #define c_l 80
 #define cl 80
-#define problem "lra498378" //solo hay que cambiar este
+#define problem "pcb442" //solo hay que cambiar este
 #define name_e "problems/"
-#define name_test_1 "iteration_time/interation_time_"
-#define name_test_2 "iteration_time_series/interation_time_"
-#define name_test_3 "warm_up_time/warm_up_time_"
-#define name_test_4 "soluciones/soluciones_"
-#define name_test_5 "hormigas/recorridos_"
-#define name_test_6 "hormigas/metricas_"
+#define name_test_1 "iteration_time/interation_time_LS"
+#define name_test_2 "iteration_time_series/interation_time_LS"
+#define name_test_3 "warm_up_time/warm_up_time_LS"
+#define name_test_4 "soluciones/soluciones_LS"
+#define name_test_5 "hormigas/recorridos_LS"
+#define name_test_6 "hormigas/metricas_LS"
 #define solucion 426 //eil51
 //mona-lisa100K
 //#define solucion 7542.0 //berlin52
@@ -53,6 +53,7 @@
 // fnl4461
 void lectura_2(float *dis);
 //-------------------------------------------------------------------------------------
+int rutainicial_2(int *rute_op,float *d,bool *lista_vis);
 void escribir_costo(int *HORMIGAS_COSTOS,int x);
 void save_c1_and_c2(float c_1,float c_2,int it, int x);
 float first_metric(int *GLOBAL_COST);
@@ -66,7 +67,11 @@ float std_vec_it(int *vec,float prom);
 float minimovec(float *vec);
 
 int EUC_2D_C(float *d_d,int p1,int p2);
-int rutainicial(int *rute_op,float *d,bool *lista_vis);
+
+void CHECK_VISITED_CPU(int *NEW_LIST,int *NEW_LIST_INDX,int ant,int CHOSEN_NODE);
+bool IS_VISITED_CPU(int *NEW_LIST,int *NEW_LIST_INDX,int ant,int j);
+int GET_CANDIDATE_CPU(int *NEW_LIST,int *NEW_LIST_INDX,int ant,int j);
+int rutainicial(int *rute_op,float *d,int *NEW_LIST_GLOBAL,int *NEW_LIST_INDX_GLOBAL,int *NN_LIST);
 /*
 *This function free the memory for the given vectores
 */

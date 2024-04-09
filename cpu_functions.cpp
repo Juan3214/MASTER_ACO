@@ -1,4 +1,35 @@
 #include "mgpu.h"
+int rutainicial_2(int *rute_op,float *d,bool *lista_vis){
+    rute_op[0]= rand()%(N);
+    
+    printf("\n el random es %d \n",rute_op[0]);
+    int cost=0;
+    for (int i=0;i<N-1;i++){
+        lista_vis[rute_op[i]]=true;
+        int min=100000000;
+        int mink=0;
+        if (i%1000==0)printf("\n voy en el nodo %d \n",i);
+        for (int j=0;j<N;j++){
+            if (rute_op[i]!=j){
+                if (lista_vis[j]==false){
+		if (EUC_2D_C(d,rute_op[i],j)<min){
+                    min=EUC_2D_C(d,rute_op[i],j);
+                
+		    mink=j;
+                }
+            }
+            }
+        }
+        rute_op[i+1]=mink;
+        cost+=EUC_2D_C(d,rute_op[i],mink);
+    }
+    cost+=EUC_2D_C(d,rute_op[N-1],rute_op[0]);
+    printf("\n");
+    rute_op[N]=rute_op[0];
+    for (int i=0;i<N+1;i++)printf("%d ",rute_op[i%N]);
+    printf("\n el coste incial es %d \n",cost);
+    return cost;
+}
 void lectura_2(float *dis){
     FILE* f;
     int height, width, ii, jj;
@@ -163,7 +194,9 @@ void save_c1_and_c2(float c_1,float c_2,int it, int x){
     {
         fprintf(file1,"%d,%d,%0.7f,%0.7f\n",x,it,c_1,c_2);
     }
+
     fclose(file1);
+
 }
 float promediar_int(int *vec){
     float sumaprom=0;
@@ -196,31 +229,73 @@ int EUC_2D_C(float *d_d,int p1,int p2){
     dy=(d_d[p1*2+1]-d_d[p2*2+1]);
     return (int)(sqrt(dx*dx+dy*dy)+0.5);                
 }
-int rutainicial(int *rute_op,float *d,bool *lista_vis){
-    rute_op[0]= rand()%(N);
-    int cost=0;
-    for (int i=0;i<N-1;i++){
-        lista_vis[rute_op[i]]=true;
-        int min=100000000;
-        int mink=0;
-        if (i%1000==0)printf("\n voy en el nodo %d \n",i);
-        for (int j=0;j<N;j++){
-            if (rute_op[i]!=j){
-                if (lista_vis[j]==false){
-                if (EUC_2D_C(d,rute_op[i],j)<min){
-                    min=EUC_2D_C(d,rute_op[i],j);
-                    mink=j;
-                }
-            }
-            }
-        }
-        rute_op[i+1]=mink;
-        cost+=EUC_2D_C(d,rute_op[i],mink);
+
+void CHECK_VISITED_CPU(int *NEW_LIST,int *NEW_LIST_INDX,int ant,int CHOSEN_NODE){
+    int length=NEW_LIST[ant*(N+1)+N]-1;
+    int CHOSEN_INDX=NEW_LIST_INDX[ant*(N+1)+CHOSEN_NODE];
+    int temp_1=NEW_LIST[ant*(N+1)+length];
+    int temp_2=NEW_LIST_INDX[ant*(N+1)+temp_1]  ;
+    NEW_LIST[ant*(N+1)+length]=CHOSEN_NODE;
+    NEW_LIST_INDX[ant*(N+1)+temp_1]=CHOSEN_INDX;
+    NEW_LIST[ant*(N+1)+CHOSEN_INDX]=temp_1;
+    NEW_LIST_INDX[ant*(N+1)+CHOSEN_NODE]=temp_2;
+    NEW_LIST[ant*(N+1)+N]-=1;
+}
+
+bool IS_VISITED_CPU(int *NEW_LIST,int *NEW_LIST_INDX,int ant,int j){
+    if (NEW_LIST_INDX[ant*(N+1)+j]<NEW_LIST[ant*(N+1)+N]){
+        return false;
     }
-    cost+=EUC_2D_C(d,rute_op[N-1],0);
-    printf("\n");
-    rute_op[N]=0;
+    else{
+        return true;
+    }
+}
+int GET_CANDIDATE_CPU(int *NEW_LIST,int *NEW_LIST_INDX,int ant,int j){
+    return NEW_LIST[ant*(N+1)+j];
+}
+int rutainicial(int *rute_op,float *d,int *NEW_LIST_GLOBAL,int *NEW_LIST_INDX_GLOBAL,int *NN_LIST){
+    int i,j;
+    for (i=0;i<N+1;i++){
+	NEW_LIST_GLOBAL[i]=i;
+	NEW_LIST_INDX_GLOBAL[i]=i;
+    }
+    int initial_node = rand()%(N);
+    CHECK_VISITED_CPU(NEW_LIST_GLOBAL,NEW_LIST_INDX_GLOBAL,0,initial_node); 
+    int cost=0;
+    printf("\n el random es %d \n",initial_node);
+    int candidate,candidate_distance,next_node,current_node;
+    current_node=initial_node;
+    for (i=0;i<N-1;i++){
+	next_node=N;
+	if (i%1000==0)printf("\n voy en el nodo %d \n",i); 	
+	for (j=0;j<cl;j++){
+		candidate=NN_LIST[current_node*cl+j];
+		if (!IS_VISITED_CPU(NEW_LIST_GLOBAL,NEW_LIST_INDX_GLOBAL,0,candidate)){
+			next_node=candidate;
+			candidate_distance=EUC_2D_C(d,current_node,candidate);
+			break;
+		}
+	}
+	if (next_node==N){
+		next_node=GET_CANDIDATE_CPU(NEW_LIST_GLOBAL,NEW_LIST_INDX_GLOBAL,0,0);
+		int min_distance=EUC_2D_C(d,current_node,next_node);
+		for (j<0;j<NEW_LIST_GLOBAL[N];j++){
+			candidate=GET_CANDIDATE_CPU(NEW_LIST_GLOBAL,NEW_LIST_INDX_GLOBAL,0,j);
+			candidate_distance=EUC_2D_C(d,candidate,current_node);
+			if (candidate_distance<min_distance){
+				next_node=candidate;
+				min_distance=candidate_distance;
+			}
+		}
+	}
+	CHECK_VISITED_CPU(NEW_LIST_GLOBAL,NEW_LIST_INDX_GLOBAL,0,next_node);
+        cost+=EUC_2D_C(d,current_node,next_node);
+	current_node=next_node;
+    }
+    cost+=EUC_2D_C(d,next_node,initial_node);
+    for (i=0;i<N+1;i++)rute_op[i]=NEW_LIST_GLOBAL[i%N];
     printf("\n el coste incial es %d \n",cost);
+    for (i=0;i<N;i++)printf("%d ",rute_op[i]);
     return cost;
 }
 
@@ -399,8 +474,9 @@ float first_metric(int *GLOBAL_COST){
 }
 float second_metric(int *GLOBAL_COST,int best_global){
     float sum_1=0.0;
-    for (int i=0;i<N_GPU*M;i++)
-        sum_1+=(float)(GLOBAL_COST[i]-best_global);
+    for (int i=0;i<N_GPU*M;i++){
+	sum_1+=(float)(GLOBAL_COST[i]-best_global);
+    }
     sum_1/=(float)(N_GPU*M);
     sum_1/=(float)best_global;
     return sum_1;

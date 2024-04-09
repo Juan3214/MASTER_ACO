@@ -51,6 +51,7 @@
 //#define solucion 2763.0 //pa561
 // fnl4461
 void lectura_2(double *dis);
+int rutainicial_2(int *rute_op,double *d,bool *lista_vis);
 //-------------------------------------------------------------------------------------
 void escribir_costo(int *HORMIGAS_COSTOS,int x);
 void save_c1_and_c2(double c_1,double c_2,int it, int x);
@@ -65,7 +66,7 @@ double std_vec_it(int *vec,double prom);
 double minimovec(double *vec);
 
 int EUC_2D_C(double *d_d,int p1,int p2);
-int rutainicial(int *rute_op,double *d,bool *lista_vis);
+int rutainicial(int *rute_op,double *d,int *NEW_LIST_GLOBAL,int *NEW_LIST_INDX_GLOBAL,int *NN_LIST);
 /*
 *This function free the memory for the given vectores
 */

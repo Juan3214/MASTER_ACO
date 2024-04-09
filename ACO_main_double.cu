@@ -136,7 +136,7 @@ int main(){
         }
         cudaSetDevice(0);
         printf("\n greedy \n");
-        int BEST_GLOBAL_SOLUTION=rutainicial(OPTIMAL_ROUTE,NODE_COORDINATE_2D,VISITED_LIST);
+        int BEST_GLOBAL_SOLUTION=rutainicial(OPTIMAL_ROUTE,NODE_COORDINATE_2D,NEW_LIST_GLOBAL,NEW_LIST_INDX_GLOBAL,NN_LIST_cl);
         cudaMemcpy(d_OPTIMAL_ROUTE,OPTIMAL_ROUTE, (N+1)*sizeof(int),cudaMemcpyHostToDevice);
 
         double ini_pheromone=(double)BEST_GLOBAL_SOLUTION;

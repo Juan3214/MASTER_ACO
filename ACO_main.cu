@@ -49,7 +49,7 @@ int main(){
     int *vec_soultion;vec_soultion= (int* )malloc(N_e*sizeof(int));
     int *vec_iter;vec_iter= (int* )malloc(N_e*sizeof(int)); //vectores para estadistica
     float *vec_warm_up_time;vec_warm_up_time= (float* )malloc(N_e*sizeof(float));
-    float prom_time_2=0;
+    float prom_time_2=0.0;
     float *vec_iteration_time;vec_iteration_time=(float*)malloc(N_e*sizeof(float));
     memset(vec_soultion,0,N_e*sizeof(int));
     float *vec_ant_iteration_time_series;vec_ant_iteration_time_series=(float*)malloc(ITERACION*sizeof(float));
@@ -64,7 +64,7 @@ int main(){
         cudaEvent_t start_events[N_GPU];
         int *HORMIGAS_COSTO;HORMIGAS_COSTO=(int*)malloc(ITERACION*M*N_GPU*sizeof(int));
         cudaEvent_t end_events[N_GPU];
-        float prom_time=0;
+        float prom_time=0.0;
         float tau_mim,tau_max;
         float P_best=0.001,avg=(float)N/2.0;
         //int *d_PREDECESSOR_ROUTE_MGPU[N_GPU],*d_SUCCESSOR_ROUTE_MGPU[N_GPU]; //2 SOLO PARA FOCUSED
@@ -136,8 +136,9 @@ int main(){
         }
         cudaSetDevice(0);
         printf("\n greedy \n");
-        int BEST_GLOBAL_SOLUTION=rutainicial(OPTIMAL_ROUTE,NODE_COORDINATE_2D,VISITED_LIST);
-        cudaMemcpy(d_OPTIMAL_ROUTE,OPTIMAL_ROUTE, (N+1)*sizeof(int),cudaMemcpyHostToDevice);
+        int BEST_GLOBAL_SOLUTION=rutainicial(OPTIMAL_ROUTE,NODE_COORDINATE_2D,NEW_LIST_GLOBAL,NEW_LIST_INDX_GLOBAL,NN_LIST_cl);
+        
+	cudaMemcpy(d_OPTIMAL_ROUTE,OPTIMAL_ROUTE, (N+1)*sizeof(int),cudaMemcpyHostToDevice);
 
         float ini_pheromone=(float)BEST_GLOBAL_SOLUTION;
         float p=pow(P_best,1/(float)N);
@@ -217,7 +218,7 @@ int main(){
             if(it==0)vec_warm_up_time[x]=(end_1-begin_1)*1000;
             vec_ant_iteration_time_series[it]+=((end_1-begin_1)*1000.0)/((float)N_e);
             
-            printf("\n termino el recorrido en %lf ms\n",(end_1-begin_1)*1000);
+            // printf("\n termino el recorrido en %lf ms\n",(end_1-begin_1)*1000);
             /*
             for(i = 0; i < 4; i++)
                 {
@@ -237,7 +238,6 @@ int main(){
             thrust::sort_by_key(thrust::device,dev_ptr, dev_ptr + N_GPU*M, dev_inx,thrust::less<int>());
             cudaMemcpy(GLOBAL_COST,d_GLOBAL_COST,N_GPU*M*sizeof(int),cudaMemcpyDeviceToHost);
             cudaMemcpy(BEST_ANT,d_BEST_ANT,N_GPU*M*sizeof(int),cudaMemcpyDeviceToHost);
-                    
             
             mejor=BEST_ANT[0];  
             cudaSetDevice(0);
@@ -248,7 +248,8 @@ int main(){
             }
             if (it%100==0)printf("\n %d\n",GLOBAL_COST[0]);
             if (GLOBAL_COST[0]<BEST_GLOBAL_SOLUTION){
-                    BEST_GLOBAL_SOLUTION=GLOBAL_COST[0];
+                    
+		    BEST_GLOBAL_SOLUTION=GLOBAL_COST[0];
                     LAST_IMPROVE_ITERATION=it;
                     tau_max=(float)e*((float)1/(float)BEST_GLOBAL_SOLUTION);
                     tau_mim=tau_max*((1-p)/((avg-1)*p));
@@ -276,13 +277,14 @@ int main(){
                     }
                     cudaSetDevice(0);
             }
-            float c_1=first_metric(GLOBAL_COST);
             
+	    float c_1=first_metric(GLOBAL_COST);
             float c_2=second_metric(GLOBAL_COST,BEST_GLOBAL_SOLUTION);
             save_c1_and_c2(c_1,c_2,it,x);
             cudaSetDevice(0);
             EVAPORATION<<<((N*cl+32-(N*cl%32)))/32,32>>>(d_PHEROMONE_MATRIX,e);
-            /*-----------------------RANK BASED--------------------------------*/
+            
+	    /*-----------------------RANK BASED--------------------------------*/
             //PHEROMONE_UPDATE<<<((N+32-(N%32)))/32,32>>>(d_GLOBAL_NEW_LIST,d_BEST_ANT,d_PHEROMONE_MATRIX,
             //d_NN_LIST_cl,d_GLOBAL_COST,d_OPTIMAL_ROUTE,BEST_GLOBAL_SOLUTION);
             /*-----------------------MMAS      --------------------------------*/
@@ -306,11 +308,11 @@ int main(){
             }
             cudaDeviceSynchronize();
             float end_2 =omp_get_wtime(); 
-            if(it!=0)prom_time+=(end_2-begin_1)*1000;
+            prom_time+=(end_2-begin_1)*1000;
         }
         vec_soultion[x]=BEST_GLOBAL_SOLUTION;
         printf("\n -------------------------------\n");
-        //for (i=0;i<N+1;i++)printf("%d ", OPTIMAL_ROUTE[i]);
+        for (i=0;i<N+1;i++)printf("%d ", OPTIMAL_ROUTE[i]);
         printf("\n -------------------------------\n");
         cudaSetDevice(0);
         cudaFree(d_ROUTE_NN);free(BEST_ANT);cudaFree(d_GLOBAL_NEW_LIST);
