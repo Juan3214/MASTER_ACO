@@ -20,22 +20,23 @@
 #define N_GPU 2
 #define N_e 5
 #define ITERACION 3000
-#define M 1024    //a partir de 512 si duplico 
+#define M 64    //a partir de 512 si duplico 
 #define n_new_edge 8
 #define Q 1 // 
 #define n_best 10
-#define N 442
+#define N 51
 #define LS_ITERATION 0
-#define c_l 80
-#define cl 80
-#define problem "pcb442" //solo hay que cambiar este
+#define c_l 32
+#define cl 32
+#define problem "eil51" //solo hay que cambiar este
 #define name_e "problems/"
-#define name_test_1 "iteration_time/interation_time_LS"
-#define name_test_2 "iteration_time_series/interation_time_LS"
-#define name_test_3 "warm_up_time/warm_up_time_LS"
-#define name_test_4 "soluciones/soluciones_LS"
-#define name_test_5 "hormigas/recorridos_LS"
-#define name_test_6 "hormigas/metricas_LS"
+#define name_test_1 "iteration_time/iteration_time_"
+#define name_test_2 "iteration_time_series/interation_time_"
+#define name_test_3 "warm_up_time/warm_up_time_"
+#define name_test_4 "soluciones/soluciones_"
+#define name_test_5 "hormigas/recorridos_"
+#define name_test_6 "hormigas/metricas_"
+#define name_test_7 "matrices/feromona_"
 #define solucion 426 //eil51
 //mona-lisa100K
 //#define solucion 7542.0 //berlin52
@@ -51,7 +52,9 @@
 //#define solucion 50778.0 //pcb442
 //#define solucion 2763.0 //pa561
 // fnl4461
+float shannon_entropy_p_r(float *PHEROMONE_MATRIX,int *ROUTE,int *NN_LIST,float *PROB_ROUTE,float last_entropy,float *ENTROPY_ITERATION,int it);
 void lectura_2(float *dis);
+void SAVE_PHEROMONE_MATRIX(float *PHEROMONE_MATRIX,int it, int expriment,float alpha,float beta,float e);
 //-------------------------------------------------------------------------------------
 int rutainicial_2(int *rute_op,float *d,bool *lista_vis);
 void escribir_costo(int *HORMIGAS_COSTOS,int x);
@@ -79,8 +82,10 @@ int rutainicial(int *rute_op,float *d,int *NEW_LIST_GLOBAL,int *NEW_LIST_INDX_GL
 /*
 * This function join the 4 gpu cost vectors
 */
+__global__ void GPU_shannon_entropy_p_r(float *PHEROMONE_MATRIX,int *ROUTE,int *NN_LIST,float *PROB_ROUTE,float last_entropy);
 void make_candidate_list(int *d_NN_LIST_aux,int *d_DISTANCE_NODE,int *DISTANCE_NODE,float *NODE_COORDINATE_2D,int *NN_LIST_cl);
 __global__ void LIST_INIT(int *NEW_LIST,int *d_NEW_LIST_INDX);
+__global__ void PHEROMONE_UPDATE_AS(int *ROUTE,int *BEST_ANT,float *PHEROMONE_MATRIX,int *NN_LIST,int *COST,int *OPTIMAL_ROUTE,int BEST_GLOBAL_SOLUTION);
 __global__ void PHEROMONE_UPDATE_MMAS(int *ROUTE,int *BEST_ANT,
 float *PHEROMONE_MATRIX,int *NN_LIST,int *COST,int *OPTIMAL_ROUTE,
 int BEST_GLOBAL_SOLUTION);

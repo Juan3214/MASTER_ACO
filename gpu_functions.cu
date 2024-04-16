@@ -1,6 +1,24 @@
 #include "mgpu.h"
 //no necesito list local search particular por gpu . borrar
 // LOCAL SEARCH LIST GUARDA POSICION EN LA RUTA, NO VERTICES
+__global__ void GPU_shannon_entropy_p_r(float *PHEROMONE_MATRIX,int *ROUTE,int *NN_LIST,float *PROB_ROUTE,float last_entropy){
+	
+    	int i=threadIdx.x+ (blockIdx.x * blockDim.x);
+	int j,k;
+	float global_sum=0.0;
+	float sum_phero;
+	int NN_neighbor;
+	sum_phero=0;
+	for (j=0;j<N;j++){
+		for (k=0;k<cl;k++){
+			NN_neighbor=NN_LIST[ROUTE[i*(N+1)+j]*cl+k];
+			if (ROUTE[i*(N+1)+(j+1)%N]==NN_neighbor){
+				sum_phero+=PHEROMONE_MATRIX[ROUTE[i*(N+1)+j]*cl+k];
+			}
+		} 	
+	}
+	PROB_ROUTE[i]=sum_phero;
+}
 __global__ void iniciar_kernel(curandState *state,int di){
     int i=threadIdx.x+ (blockIdx.x * blockDim.x);
     curand_init((unsigned long long)clock() + i+M*di, 0, 0, &state[i]);
@@ -156,6 +174,20 @@ __global__ void PHEROMONE_UPDATE(int *ROUTE,int *BEST_ANT,float *PHEROMONE_MATRI
             PHEROMONE_MATRIX[OPTIMAL_ROUTE[j]*cl+k]+=(1.0*(n_best))/((float)BEST_GLOBAL_SOLUTION);
         }
     }
+    }
+}
+__global__ void PHEROMONE_UPDATE_AS(int *ROUTE,int *BEST_ANT,float *PHEROMONE_MATRIX,int *NN_LIST,int *COST,int *OPTIMAL_ROUTE,int BEST_GLOBAL_SOLUTION){
+    int j=threadIdx.x+ (blockIdx.x * blockDim.x);
+    if (j<N){
+    int ant,k;
+    for (ant=0;ant<M;ant++)
+        for (k=0;k<cl;k++){
+            //printf("\n Wow %d \n",ROUTE[BEST_ANT[ant]*(N+1)+j+1]);
+            if (ROUTE[BEST_ANT[ant]*(N+1)+(j+1)%N]==NN_LIST[ROUTE[BEST_ANT[ant]*(N+1)+j%N]*cl+k]){
+                PHEROMONE_MATRIX[ROUTE[BEST_ANT[ant]*(N+1)+j%N]*cl+k]+=(1.0)/((float)COST[ant]);
+                //printf("\n la suma %f",(1.0*(n_best-1-ant))/((float)COST[ant]););
+            }
+        }
     }
 }
 __global__ void PHEROMONE_UPDATE_MMAS(int *ROUTE,int *BEST_ANT,

@@ -75,7 +75,7 @@ int main(){
         int *d_NEW_LIST[N_GPU],*d_NEW_LIST_INDX[N_GPU],*d_ROUTE_AUX[N_GPU];
         float *d_HEURISTIC_PHEROMONE_MGPU[N_GPU]; //10
         /* 10 MULTI GPU VARIABLES */
-        
+	        
         int *NEW_LIST_GLOBAL,*NEW_LIST_INDX_GLOBAL;
         NEW_LIST_GLOBAL=(int*)malloc(M*N_GPU*(N+1)*sizeof(int));
         NEW_LIST_INDX_GLOBAL=(int*)malloc(M*N_GPU*(N+1)*sizeof(int));
@@ -103,8 +103,13 @@ int main(){
         cudaMalloc( (void **) &d_NODE_COORDINATE_2D, N*2*sizeof(float ) );//6
         cudaMemcpy(d_NODE_COORDINATE_2D,NODE_COORDINATE_2D,2*N*sizeof( float ),cudaMemcpyHostToDevice);
         printf("\n fijando memoria en cpu \n");
-
-        OPTIMAL_ROUTE=(int*)malloc((N+1)*sizeof(int));
+	
+	//PROB PHERO
+	float *PROB_PHERO;PROB_PHERO=(float*)malloc(N_GPU*M*sizeof(float));
+	float *ENTROPY_ITERATION;ENTROPY_ITERATION=(float*)malloc(ITERACION);
+	//PROB PHERO
+        
+	OPTIMAL_ROUTE=(int*)malloc((N+1)*sizeof(int));
         PREDECESSOR_ROUTE=(int*)malloc(N*sizeof(int));
         SUCCESSOR_ROUTE=(int*)malloc(N*sizeof(int));
         GLOBAL_COST=(int*)malloc(N_GPU*M*sizeof(int));
@@ -145,7 +150,8 @@ int main(){
         
         printf("\n fijando feromona %f \n",(float)1/ini_pheromone);
         fijar_pheromone<<<(N*cl+32-(N*cl%32)),32>>>(d_PHEROMONE_MATRIX,(float)1/ini_pheromone);
-
+        cudaMemcpy(HEURISTIC_PHEROMONE,d_PHEROMONE_MATRIX,(c_l*N)*sizeof(float),cudaMemcpyDeviceToHost);
+	SAVE_PHEROMONE_MATRIX(HEURISTIC_PHEROMONE, 0, x, alpha, beta, e);
         HEURISTIC_PHEROMONE_CALCULATION<<<N,cl>>>(d_NODE_COORDINATE_2D,d_PHEROMONE_MATRIX,
         d_HEURISTIC_PHEROMONE,d_NN_LIST_cl,alpha,beta);
 
@@ -186,6 +192,7 @@ int main(){
         
         cudaSetDevice(0);
         printf("\n INICIANDO ITERACIONES\n");
+	float entropy=log2(M);
         for (it=0;it<ITERACION;it++){
             double begin_1 =omp_get_wtime();
             #pragma omp parallel for num_threads(N_GPU)
@@ -193,8 +200,7 @@ int main(){
                 cudaSetDevice(i);
                 cudaEventRecord(start_events[i]);
                 LIST_INIT<<<N,min(M,1024)>>>(d_NEW_LIST[i],d_NEW_LIST_INDX[i]);
-                ANT_SOLUTION_CONSTRUCT<<<M/4,4>>>(d_HEURISTIC_PHEROMONE_MGPU[i],d_NODE_COORDINATE_MGPU[i],
-            i,d_PREDECESSOR_ROUTE_OP_MGPU[i],
+                ANT_SOLUTION_CONSTRUCT<<<M/4,4>>>(d_HEURISTIC_PHEROMONE_MGPU[i],d_NODE_COORDINATE_MGPU[i],i,d_PREDECESSOR_ROUTE_OP_MGPU[i],
                 d_SUCCESSOR_ROUTE_OP_MGPU[i],8,d_state[i],d_NN_LIST_CL_MGPU[i],d_NEW_LIST[i],d_NEW_LIST_INDX[i]);
                 /*------------------------ SOBRE ANT_SOLUTION_CONSTRUCT--------------------*/            
                 //aumentar el numero de thread ahora parece mejorar el rendimiento
@@ -282,18 +288,21 @@ int main(){
             float c_2=second_metric(GLOBAL_COST,BEST_GLOBAL_SOLUTION);
             save_c1_and_c2(c_1,c_2,it,x);
             cudaSetDevice(0);
-            EVAPORATION<<<((N*cl+32-(N*cl%32)))/32,32>>>(d_PHEROMONE_MATRIX,e);
-            
-	    /*-----------------------RANK BASED--------------------------------*/
-            //PHEROMONE_UPDATE<<<((N+32-(N%32)))/32,32>>>(d_GLOBAL_NEW_LIST,d_BEST_ANT,d_PHEROMONE_MATRIX,
+	    EVAPORATION<<<((N*cl+32-(N*cl%32)))/32,32>>>(d_PHEROMONE_MATRIX,e);
+	    /*-----------------------ANT SYSTEM--------------------------------*/
+	   // PHEROMONE_UPDATE_AS<<<((N+32-(N%32)))/32,32>>>(d_GLOBAL_NEW_LIST,d_BEST_ANT,d_PHEROMONE_MATRIX, 
             //d_NN_LIST_cl,d_GLOBAL_COST,d_OPTIMAL_ROUTE,BEST_GLOBAL_SOLUTION);
             /*-----------------------MMAS      --------------------------------*/
-            PHEROMONE_CHECK_MMAS<<<((N*cl+32-(N*cl%32)))/32,32>>>(d_PHEROMONE_MATRIX, tau_max, tau_mim);
+	    /*-----------------------RANK BASED--------------------------------*/
+            PHEROMONE_UPDATE<<<((N+32-(N%32)))/32,32>>>(d_GLOBAL_NEW_LIST,d_BEST_ANT,d_PHEROMONE_MATRIX, 
+            //d_NN_LIST_cl,d_GLOBAL_COST,d_OPTIMAL_ROUTE,BEST_GLOBAL_SOLUTION);
+            /*-----------------------MMAS      --------------------------------*/
+            //PHEROMONE_CHECK_MMAS<<<((N*cl+32-(N*cl%32)))/32,32>>>(d_PHEROMONE_MATRIX, tau_max, tau_mim);
             //PHEROMONE_UPDATE<<<((N+32-(N%32)))/32,32>>>(d_GLOBAL_NEW_LIST,d_BEST_ANT,d_PHEROMONE_MATRIX,
             //d_NN_LIST_cl,d_GLOBAL_COST,d_OPTIMAL_ROUTE,BEST_GLOBAL_SOLUTION);
-            PHEROMONE_UPDATE_MMAS<<<((N+32-(N%32)))/32,32>>>(d_GLOBAL_NEW_LIST,d_BEST_ANT,d_PHEROMONE_MATRIX,
+            //PHEROMONE_UPDATE_MMAS<<<((N+32-(N%32)))/32,32>>>(d_GLOBAL_NEW_LIST,d_BEST_ANT,d_PHEROMONE_MATRIX,
             d_NN_LIST_cl,d_GLOBAL_COST,d_OPTIMAL_ROUTE,BEST_GLOBAL_SOLUTION);
-            PHEROMONE_CHECK_MMAS<<<((N*cl+32-(N*cl%32)))/32,32>>>(d_PHEROMONE_MATRIX, tau_max, tau_mim);
+            //PHEROMONE_CHECK_MMAS<<<((N*cl+32-(N*cl%32)))/32,32>>>(d_PHEROMONE_MATRIX, tau_max, tau_mim);
             cudaMemcpy(HEURISTIC_PHEROMONE,d_PHEROMONE_MATRIX,cl*N*sizeof(float),cudaMemcpyDeviceToHost);        
             
             HEURISTIC_PHEROMONE_CALCULATION<<<N,cl>>>(d_NODE_COORDINATE_2D,d_PHEROMONE_MATRIX,
@@ -301,6 +310,7 @@ int main(){
             
             
             cudaMemcpy(HEURISTIC_PHEROMONE,d_HEURISTIC_PHEROMONE,(N*c_l)*sizeof(float),cudaMemcpyDeviceToHost);
+	    entropy=shannon_entropy_p_r(HEURISTIC_PHEROMONE,NEW_LIST_GLOBAL,NN_LIST_cl,PROB_PHERO,entropy,ENTROPY_ITERATION,it);
 
             for (i=0;i<N_GPU;i++){
                 cudaSetDevice(i);
@@ -339,8 +349,9 @@ int main(){
         //free(LOCAL_SEARCH_LIST_MGPU);
         escribir_costo(HORMIGAS_COSTO,x);
         free(HORMIGAS_COSTO);
-
-        free(OPTIMAL_ROUTE);free(VISITED_LIST);
+	free(PROB_PHERO);
+        free(ENTROPY_ITERATION);
+	free(OPTIMAL_ROUTE);free(VISITED_LIST);
         free(SUCCESSOR_ROUTE);free(PREDECESSOR_ROUTE);free(GLOBAL_COST);
         free(HEURISTIC_PHEROMONE);free(NEW_LIST_GLOBAL);free(NEW_LIST_INDX_GLOBAL);
         prom_time/=(ITERACION);

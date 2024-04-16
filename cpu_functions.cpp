@@ -1,4 +1,37 @@
 #include "mgpu.h"
+
+float shannon_entropy_p_r(float *PHEROMONE_MATRIX,int *ROUTE,int *NN_LIST,float *PROB_ROUTE,float last_entropy,float *ENTROPY_ITERATION,int it){
+	int i,j,k;
+	float global_sum=0.0;
+	float sum_phero;
+	int NN_neighbor;
+	for (i=0;i<N_GPU*M;i++){
+		sum_phero=0;
+		for (j=0;j<N;j++){
+			for (k=0;k<cl;k++){
+				NN_neighbor=NN_LIST[ROUTE[i*(N+1)+j]*cl+k];
+				if (ROUTE[i*(N+1)+(j+1)%N]==NN_neighbor){
+					sum_phero+=PHEROMONE_MATRIX[ROUTE[i*(N+1)+j]*cl+k];
+				}
+			} 	
+		}
+		PROB_ROUTE[i]=sum_phero;
+		global_sum+=sum_phero;
+	}
+	float aux_cumulative=0.0;
+	float entropy_shannon=0.0;
+	for (i=0;i<N_GPU*M;i++){
+		PROB_ROUTE[i]/=global_sum;
+		entropy_shannon+=PROB_ROUTE[i]*log2(PROB_ROUTE[i]);
+	}
+	entropy_shannon*=-1.0;
+	float H=abs((entropy_shannon-last_entropy)/last_entropy);
+	ENTROPY_ITERATION[it]=H;
+	printf("%0.9f \n",H);
+	return entropy_shannon;
+}
+
+
 int rutainicial_2(int *rute_op,float *d,bool *lista_vis){
     rute_op[0]= rand()%(N);
     
@@ -38,7 +71,6 @@ void lectura_2(float *dis){
     file_name+=problem;
     file_name+=".tsp";
     if((f = fopen(file_name.c_str(), "r")) == NULL){
-        printf("\n queso \n");
         exit(1);    
     }
 
@@ -50,7 +82,6 @@ void lectura_2(float *dis){
         if(fscanf(f, "%*i %f %f",&dis[ii*2+0],&dis[ii*2+1]) != 2)
             exit(1);
     fclose(f);
-    //for (ii=0;ii<N;ii++)printf("%i %i %i\n",dis[ii*3+0],dis[ii*3+1],dis[ii*3+2]);
 }
 void guardar_iteration_time(float *time,float alpha,float beta,float e){
     FILE *file1;
@@ -262,7 +293,6 @@ int rutainicial(int *rute_op,float *d,int *NEW_LIST_GLOBAL,int *NEW_LIST_INDX_GL
     int initial_node = rand()%(N);
     CHECK_VISITED_CPU(NEW_LIST_GLOBAL,NEW_LIST_INDX_GLOBAL,0,initial_node); 
     int cost=0;
-    printf("\n el random es %d \n",initial_node);
     int candidate,candidate_distance,next_node,current_node;
     current_node=initial_node;
     for (i=0;i<N-1;i++){
@@ -480,4 +510,30 @@ float second_metric(int *GLOBAL_COST,int best_global){
     sum_1/=(float)(N_GPU*M);
     sum_1/=(float)best_global;
     return sum_1;
+}
+void SAVE_PHEROMONE_MATRIX(float *PHEROMONE_MATRIX,int it, int experiment,float alpha,float beta,float e){
+    FILE *file1;
+    std::string file_name = name_test_7;
+    file_name+=problem;
+    file_name+="_"+std::to_string(alpha)+"_";
+    file_name+=std::to_string(beta)+"_";
+    file_name+=".csv";
+    file1 = fopen(file_name.c_str(), "a");
+    if(file1 == NULL)
+    {
+        printf("Error opening file, to write to it."); //archivo para guardar las iteraciones 
+    }
+    else
+    {
+	int i,j;
+        for (i=0;i<N;i++){
+		fprintf(file1,"%d,%d,%d",experiment,it,i);
+		for (j=0;j<cl;j++){
+			fprintf(file1,",%.9f",PHEROMONE_MATRIX[i*cl+j]);
+		}
+        	fprintf(file1,"\n");
+	}
+        fprintf(file1,"\n");
+    }
+    fclose(file1);
 }
