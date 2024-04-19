@@ -26,8 +26,8 @@
 #define n_best 10
 #define N 51
 #define LS_ITERATION 0
-#define c_l 32
-#define cl 32
+#define c_l 20
+#define cl 20
 #define problem "eil51" //solo hay que cambiar este
 #define name_e "problems/"
 #define name_test_1 "iteration_time/iteration_time_"
@@ -52,6 +52,8 @@
 //#define solucion 50778.0 //pcb442
 //#define solucion 2763.0 //pa561
 // fnl4461
+void guardar_resultados(float *vec_warm_up_time,int *vec_solution,float *vec_ant_iteration_time_series,float *vec_iteration_time,float alpha,float beta,float e );
+void shannon_entropy_pheromone(float *PHEROMONE_MATRIX,float *PROB_MATRIX,float *ENTROPY_VECTOR);
 float shannon_entropy_p_r(float *PHEROMONE_MATRIX,int *ROUTE,int *NN_LIST,float *PROB_ROUTE,float last_entropy,float *ENTROPY_ITERATION,int it);
 void lectura_2(float *dis);
 void SAVE_PHEROMONE_MATRIX(float *PHEROMONE_MATRIX,int it, int expriment,float alpha,float beta,float e);

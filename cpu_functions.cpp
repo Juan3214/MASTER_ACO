@@ -83,6 +83,14 @@ void lectura_2(float *dis){
             exit(1);
     fclose(f);
 }
+void guardar_resultados(float *vec_warm_up_time,int *vec_solution,float *vec_ant_iteration_time_series,float *vec_iteration_time,float alpha,float beta,float e ){
+    guardar_warm_up(vec_warm_up_time,alpha,beta,e);guardar_soluciones(vec_solution,alpha,beta,e);
+    guardar_iteration_time_series(vec_ant_iteration_time_series,alpha,beta,e);
+    guardar_iteration_time(vec_iteration_time,alpha,beta,e);
+
+}
+
+
 void guardar_iteration_time(float *time,float alpha,float beta,float e){
     FILE *file1;
     std::string file_name = name_test_1;

@@ -46,12 +46,12 @@ int main(){
     float beta=5;
     float e=0.01;
     
-    int *vec_soultion;vec_soultion= (int* )malloc(N_e*sizeof(int));
+    int *vec_solution;vec_solution= (int* )malloc(N_e*sizeof(int));
     int *vec_iter;vec_iter= (int* )malloc(N_e*sizeof(int)); //vectores para estadistica
     float *vec_warm_up_time;vec_warm_up_time= (float* )malloc(N_e*sizeof(float));
     float prom_time_2=0.0;
     float *vec_iteration_time;vec_iteration_time=(float*)malloc(N_e*sizeof(float));
-    memset(vec_soultion,0,N_e*sizeof(int));
+    memset(vec_solution,0,N_e*sizeof(int));
     float *vec_ant_iteration_time_series;vec_ant_iteration_time_series=(float*)malloc(ITERACION*sizeof(float));
 
     for (i=0;i<ITERACION;i++)vec_ant_iteration_time_series[i]=0.0;
@@ -104,10 +104,12 @@ int main(){
         cudaMemcpy(d_NODE_COORDINATE_2D,NODE_COORDINATE_2D,2*N*sizeof( float ),cudaMemcpyHostToDevice);
         printf("\n fijando memoria en cpu \n");
 	
-	//PROB PHERO
+	//ENTROPY CALCULATION
 	float *PROB_PHERO;PROB_PHERO=(float*)malloc(N_GPU*M*sizeof(float));
 	float *ENTROPY_ITERATION;ENTROPY_ITERATION=(float*)malloc(ITERACION);
-	//PROB PHERO
+	float *PROB_MATRIX;PROB_MATRIX=(float*)malloc(N*cl*sizeof(float));
+	float *ENTROPY_VECTOR;ENTROPY_VECTOR=(float*)malloc(N*sizeof(float));
+	//ENTROPY CALCULATION
         
 	OPTIMAL_ROUTE=(int*)malloc((N+1)*sizeof(int));
         PREDECESSOR_ROUTE=(int*)malloc(N*sizeof(int));
@@ -304,13 +306,14 @@ int main(){
             d_NN_LIST_cl,d_GLOBAL_COST,d_OPTIMAL_ROUTE,BEST_GLOBAL_SOLUTION);
             //PHEROMONE_CHECK_MMAS<<<((N*cl+32-(N*cl%32)))/32,32>>>(d_PHEROMONE_MATRIX, tau_max, tau_mim);
             cudaMemcpy(HEURISTIC_PHEROMONE,d_PHEROMONE_MATRIX,cl*N*sizeof(float),cudaMemcpyDeviceToHost);        
-            
+	    shannon_entropy_pheromone(HEURISTIC_PHEROMONE,PROB_MATRIX,ENTROPY_VECTOR);           
+
             HEURISTIC_PHEROMONE_CALCULATION<<<N,cl>>>(d_NODE_COORDINATE_2D,d_PHEROMONE_MATRIX,
             d_HEURISTIC_PHEROMONE,d_NN_LIST_cl,alpha,beta);
             
             
             cudaMemcpy(HEURISTIC_PHEROMONE,d_HEURISTIC_PHEROMONE,(N*c_l)*sizeof(float),cudaMemcpyDeviceToHost);
-	    entropy=shannon_entropy_p_r(HEURISTIC_PHEROMONE,NEW_LIST_GLOBAL,NN_LIST_cl,PROB_PHERO,entropy,ENTROPY_ITERATION,it);
+//segmentation	    //entropy=shannon_entropy_p_r(HEURISTIC_PHEROMONE,NEW_LIST_GLOBAL,NN_LIST_cl,PROB_PHERO,entropy,ENTROPY_ITERATION,it);
 
             for (i=0;i<N_GPU;i++){
                 cudaSetDevice(i);
@@ -320,7 +323,7 @@ int main(){
             float end_2 =omp_get_wtime(); 
             prom_time+=(end_2-begin_1)*1000;
         }
-        vec_soultion[x]=BEST_GLOBAL_SOLUTION;
+        vec_solution[x]=BEST_GLOBAL_SOLUTION;
         printf("\n -------------------------------\n");
         for (i=0;i<N+1;i++)printf("%d ", OPTIMAL_ROUTE[i]);
         printf("\n -------------------------------\n");
@@ -351,6 +354,8 @@ int main(){
         free(HORMIGAS_COSTO);
 	free(PROB_PHERO);
         free(ENTROPY_ITERATION);
+	free(PROB_MATRIX);
+	free(ENTROPY_VECTOR);
 	free(OPTIMAL_ROUTE);free(VISITED_LIST);
         free(SUCCESSOR_ROUTE);free(PREDECESSOR_ROUTE);free(GLOBAL_COST);
         free(HEURISTIC_PHEROMONE);free(NEW_LIST_GLOBAL);free(NEW_LIST_INDX_GLOBAL);
@@ -359,12 +364,9 @@ int main(){
         vec_iteration_time[x]=prom_time;
         
     }
-    prom_time_2/=(N_e);
-    
+    prom_time_2/=(N_e);   
+    guardar_resultados(vec_warm_up_time,vec_solution,vec_ant_iteration_time_series,vec_iteration_time,alpha,beta,e);
     printf("\n el tiempo promedio es de %f\n ",prom_time_2);
-    guardar_warm_up(vec_warm_up_time,alpha,beta,e);guardar_soluciones(vec_soultion,alpha,beta,e);
-    guardar_iteration_time_series(vec_ant_iteration_time_series,alpha,beta,e);
-    guardar_iteration_time(vec_iteration_time,alpha,beta,e);
     free(NODE_COORDINATE_2D);free(DISTANCE_NODE);
     cudaFree(d_DISTANCE_NODE);free(NN_LIST_cl);cudaFree(d_NN_LIST_aux);cudaFree(d_NN_LIST_cl);
     return 0;
