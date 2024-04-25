@@ -89,8 +89,37 @@ void guardar_resultados(float *vec_warm_up_time,int *vec_solution,float *vec_ant
     guardar_iteration_time(vec_iteration_time,alpha,beta,e);
 
 }
-
-
+void guardar_entropias_pheromone(float *ENTROPY_VECTOR_PHEROMONE,float *ENTROPY_VECTOR_PHEROMONE_H,float alpha,float beta, float e,int it,int x){
+    FILE *file1,*file2;
+    std::string file_name_1 = name_test_8;
+    std::string file_name_2 = name_test_8;
+    file_name_1+=problem;
+    file_name_2+=problem;
+    file_name_2+="_H";
+    int i;
+    file_name_1+=".csv";
+    file_name_2+=".csv";
+    file1 = fopen(file_name_1.c_str(), "a");
+    file2 = fopen(file_name_2.c_str(), "a");
+    if(file1 == NULL)
+    {
+        printf("Error opening file, to write to it."); //archivo para guardar las iteraciones 
+    }
+    else
+    {
+        fprintf(file1,"%d,%d,%f,%f,%f,%d,%d",N,N_GPU*M,alpha,beta,e,it,x);
+        fprintf(file2,"%d,%d,%f,%f,%f,%d,%d",N,N_GPU*M,alpha,beta,e,it,x);
+	for (i=0;i<N;i++){
+        	fprintf(file1,",%f",ENTROPY_VECTOR_PHEROMONE[i]);
+        	fprintf(file2,",%f",ENTROPY_VECTOR_PHEROMONE_H[i]);
+	} 
+        fprintf(file1,"\n");
+        fprintf(file2,"\n");
+    }
+    fclose(file1);
+    fclose(file2);
+	
+}
 void guardar_iteration_time(float *time,float alpha,float beta,float e){
     FILE *file1;
     std::string file_name = name_test_1;

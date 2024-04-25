@@ -18,17 +18,17 @@
 #include <thrust/sort.h>
 #include <thrust/fill.h>
 #define N_GPU 2
-#define N_e 5
+#define N_e 5 
 #define ITERACION 3000
-#define M 64    //a partir de 512 si duplico 
+#define M 512    //a partir de 512 si duplico 
 #define n_new_edge 8
 #define Q 1 // 
 #define n_best 10
-#define N 51
+#define N 442 
 #define LS_ITERATION 0
-#define c_l 20
-#define cl 20
-#define problem "eil51" //solo hay que cambiar este
+#define c_l 32
+#define cl 32
+#define problem "pcb442" //solo hay que cambiar este
 #define name_e "problems/"
 #define name_test_1 "iteration_time/iteration_time_"
 #define name_test_2 "iteration_time_series/interation_time_"
@@ -36,7 +36,8 @@
 #define name_test_4 "soluciones/soluciones_"
 #define name_test_5 "hormigas/recorridos_"
 #define name_test_6 "hormigas/metricas_"
-#define name_test_7 "matrices/feromona_"
+#define name_test_7 "matrices/ENTROPY_"
+#define name_test_8 "matrices/ENTROPY_VECTOR_PHERO_MMAS_"
 #define solucion 426 //eil51
 //mona-lisa100K
 //#define solucion 7542.0 //berlin52
@@ -52,6 +53,7 @@
 //#define solucion 50778.0 //pcb442
 //#define solucion 2763.0 //pa561
 // fnl4461
+void guardar_entropias_pheromone(float *ENTROPY_VECTOR_PHEROMONE,float *ENTROPY_VECTOR_PHEROMONE_H,float alpha,float beta, float e,int it,int x);
 void guardar_resultados(float *vec_warm_up_time,int *vec_solution,float *vec_ant_iteration_time_series,float *vec_iteration_time,float alpha,float beta,float e );
 void shannon_entropy_pheromone(float *PHEROMONE_MATRIX,float *PROB_MATRIX,float *ENTROPY_VECTOR);
 float shannon_entropy_p_r(float *PHEROMONE_MATRIX,int *ROUTE,int *NN_LIST,float *PROB_ROUTE,float last_entropy,float *ENTROPY_ITERATION,int it);

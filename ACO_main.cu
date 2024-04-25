@@ -108,7 +108,8 @@ int main(){
 	float *PROB_PHERO;PROB_PHERO=(float*)malloc(N_GPU*M*sizeof(float));
 	float *ENTROPY_ITERATION;ENTROPY_ITERATION=(float*)malloc(ITERACION);
 	float *PROB_MATRIX;PROB_MATRIX=(float*)malloc(N*cl*sizeof(float));
-	float *ENTROPY_VECTOR;ENTROPY_VECTOR=(float*)malloc(N*sizeof(float));
+	float *ENTROPY_VECTOR_PHEROMONE;ENTROPY_VECTOR_PHEROMONE=(float*)malloc(N*sizeof(float));
+	float *ENTROPY_VECTOR_PHEROMONE_H;ENTROPY_VECTOR_PHEROMONE_H=(float*)malloc(N*sizeof(float));
 	//ENTROPY CALCULATION
         
 	OPTIMAL_ROUTE=(int*)malloc((N+1)*sizeof(int));
@@ -292,28 +293,30 @@ int main(){
             cudaSetDevice(0);
 	    EVAPORATION<<<((N*cl+32-(N*cl%32)))/32,32>>>(d_PHEROMONE_MATRIX,e);
 	    /*-----------------------ANT SYSTEM--------------------------------*/
-	   // PHEROMONE_UPDATE_AS<<<((N+32-(N%32)))/32,32>>>(d_GLOBAL_NEW_LIST,d_BEST_ANT,d_PHEROMONE_MATRIX, 
+	    //PHEROMONE_UPDATE_AS<<<((N+32-(N%32)))/32,32>>>(d_GLOBAL_NEW_LIST,d_BEST_ANT,d_PHEROMONE_MATRIX, 
             //d_NN_LIST_cl,d_GLOBAL_COST,d_OPTIMAL_ROUTE,BEST_GLOBAL_SOLUTION);
             /*-----------------------MMAS      --------------------------------*/
 	    /*-----------------------RANK BASED--------------------------------*/
-            PHEROMONE_UPDATE<<<((N+32-(N%32)))/32,32>>>(d_GLOBAL_NEW_LIST,d_BEST_ANT,d_PHEROMONE_MATRIX, 
-            //d_NN_LIST_cl,d_GLOBAL_COST,d_OPTIMAL_ROUTE,BEST_GLOBAL_SOLUTION);
+            //PHEROMONE_UPDATE<<<((N+32-(N%32)))/32,32>>>(d_GLOBAL_NEW_LIST,d_BEST_ANT,d_PHEROMONE_MATRIX, 
+            //d_NN_LIST_cl,d_GLOBAL_COST,d_OPTIMAL_ROUTE,BEST_G5LOBAL_SOLUTION);
             /*-----------------------MMAS      --------------------------------*/
-            //PHEROMONE_CHECK_MMAS<<<((N*cl+32-(N*cl%32)))/32,32>>>(d_PHEROMONE_MATRIX, tau_max, tau_mim);
+            PHEROMONE_CHECK_MMAS<<<((N*cl+32-(N*cl%32)))/32,32>>>(d_PHEROMONE_MATRIX, tau_max, tau_mim);
             //PHEROMONE_UPDATE<<<((N+32-(N%32)))/32,32>>>(d_GLOBAL_NEW_LIST,d_BEST_ANT,d_PHEROMONE_MATRIX,
             //d_NN_LIST_cl,d_GLOBAL_COST,d_OPTIMAL_ROUTE,BEST_GLOBAL_SOLUTION);
-            //PHEROMONE_UPDATE_MMAS<<<((N+32-(N%32)))/32,32>>>(d_GLOBAL_NEW_LIST,d_BEST_ANT,d_PHEROMONE_MATRIX,
+            PHEROMONE_UPDATE_MMAS<<<((N+32-(N%32)))/32,32>>>(d_GLOBAL_NEW_LIST,d_BEST_ANT,d_PHEROMONE_MATRIX,
             d_NN_LIST_cl,d_GLOBAL_COST,d_OPTIMAL_ROUTE,BEST_GLOBAL_SOLUTION);
-            //PHEROMONE_CHECK_MMAS<<<((N*cl+32-(N*cl%32)))/32,32>>>(d_PHEROMONE_MATRIX, tau_max, tau_mim);
+            PHEROMONE_CHECK_MMAS<<<((N*cl+32-(N*cl%32)))/32,32>>>(d_PHEROMONE_MATRIX, tau_max, tau_mim);
             cudaMemcpy(HEURISTIC_PHEROMONE,d_PHEROMONE_MATRIX,cl*N*sizeof(float),cudaMemcpyDeviceToHost);        
-	    shannon_entropy_pheromone(HEURISTIC_PHEROMONE,PROB_MATRIX,ENTROPY_VECTOR);           
+	    shannon_entropy_pheromone(HEURISTIC_PHEROMONE,PROB_MATRIX,ENTROPY_VECTOR_PHEROMONE);           
 
             HEURISTIC_PHEROMONE_CALCULATION<<<N,cl>>>(d_NODE_COORDINATE_2D,d_PHEROMONE_MATRIX,
             d_HEURISTIC_PHEROMONE,d_NN_LIST_cl,alpha,beta);
             
             
             cudaMemcpy(HEURISTIC_PHEROMONE,d_HEURISTIC_PHEROMONE,(N*c_l)*sizeof(float),cudaMemcpyDeviceToHost);
+	    shannon_entropy_pheromone(HEURISTIC_PHEROMONE,PROB_MATRIX,ENTROPY_VECTOR_PHEROMONE_H);           
 //segmentation	    //entropy=shannon_entropy_p_r(HEURISTIC_PHEROMONE,NEW_LIST_GLOBAL,NN_LIST_cl,PROB_PHERO,entropy,ENTROPY_ITERATION,it);
+	    guardar_entropias_pheromone(ENTROPY_VECTOR_PHEROMONE,ENTROPY_VECTOR_PHEROMONE_H,alpha,beta,e,it,x);
 
             for (i=0;i<N_GPU;i++){
                 cudaSetDevice(i);
@@ -355,7 +358,8 @@ int main(){
 	free(PROB_PHERO);
         free(ENTROPY_ITERATION);
 	free(PROB_MATRIX);
-	free(ENTROPY_VECTOR);
+	free(ENTROPY_VECTOR_PHEROMONE);
+	free(ENTROPY_VECTOR_PHEROMONE_H);
 	free(OPTIMAL_ROUTE);free(VISITED_LIST);
         free(SUCCESSOR_ROUTE);free(PREDECESSOR_ROUTE);free(GLOBAL_COST);
         free(HEURISTIC_PHEROMONE);free(NEW_LIST_GLOBAL);free(NEW_LIST_INDX_GLOBAL);
