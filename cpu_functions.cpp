@@ -220,52 +220,6 @@ void guardar_soluciones(int *soluciones,float alpha,float beta,float e){
     }
     fclose(file1);
 }
-void escribir_costo(int *HORMIGAS_COSTOS,int x){
-    FILE *file1;
-    std::string file_name = name_test_5;
-    file_name+=problem;
-    file_name+=".csv";
-    file1 = fopen(file_name.c_str(), "a");
-    if(file1 == NULL)
-    {
-        printf("Error opening file, to write to it."); //archivo para guardar las iteraciones 
-    }
-    else
-    {
-        for (int it=0;it<ITERACION;it++){
-            fprintf(file1,"%d,",x);
-            for (int i=0;i<4*M;i++){
-                if (i==0){
-                    fprintf(file1,"%d,%d",it,HORMIGAS_COSTOS[i+N_GPU*M*it]);
-                }
-                else{
-                    fprintf(file1,",%d",HORMIGAS_COSTOS[i+N_GPU*M*it]);
-                }
-            }
-            fprintf(file1,"\n");
-        }
-        
-    }
-    fclose(file1);
-}
-void save_c1_and_c2(float c_1,float c_2,int it, int x){
-    FILE *file1;
-    std::string file_name = name_test_6;
-    file_name+=problem;
-    file_name+=".csv";
-    file1 = fopen(file_name.c_str(), "a");
-    if(file1 == NULL)
-    {
-        printf("Error opening file, to write to it."); //archivo para guardar las iteraciones 
-    }
-    else
-    {
-        fprintf(file1,"%d,%d,%0.7f,%0.7f\n",x,it,c_1,c_2);
-    }
-
-    fclose(file1);
-
-}
 float promediar_int(int *vec){
     float sumaprom=0;
     for (int i=0;i<N_e;i++){
@@ -321,12 +275,13 @@ bool IS_VISITED_CPU(int *NEW_LIST,int *NEW_LIST_INDX,int ant,int j){
 int GET_CANDIDATE_CPU(int *NEW_LIST,int *NEW_LIST_INDX,int ant,int j){
     return NEW_LIST[ant*(N+1)+j];
 }
-int rutainicial(int *rute_op,float *d,int *NEW_LIST_GLOBAL,int *NEW_LIST_INDX_GLOBAL,int *NN_LIST){
+int rutainicial(int *rute_op,float *d,int *NEW_LIST_GLOBAL,int *NEW_LIST_INDX_GLOBAL,int *NN_LIST,int *POS_IN_ROUTE){
     int i,j;
     for (i=0;i<N+1;i++){
 	NEW_LIST_GLOBAL[i]=i;
 	NEW_LIST_INDX_GLOBAL[i]=i;
     }
+    srand(0);
     int initial_node = rand()%(N);
     CHECK_VISITED_CPU(NEW_LIST_GLOBAL,NEW_LIST_INDX_GLOBAL,0,initial_node); 
     int cost=0;
@@ -360,7 +315,10 @@ int rutainicial(int *rute_op,float *d,int *NEW_LIST_GLOBAL,int *NEW_LIST_INDX_GL
 	current_node=next_node;
     }
     cost+=EUC_2D_C(d,next_node,initial_node);
-    for (i=0;i<N+1;i++)rute_op[i]=NEW_LIST_GLOBAL[i%N];
+    for (i=0;i<N+1;i++){
+	    rute_op[i]=NEW_LIST_GLOBAL[i%N];
+	    POS_IN_ROUTE[rute_op[i]]=i;
+    }
     printf("\n el coste incial es %d \n",cost);
     for (i=0;i<N;i++)printf("%d ",rute_op[i]);
     return cost;
@@ -530,24 +488,6 @@ float opt33(int *rute_op,int *rute_op_aux,float *d,float global_sol){
     //printf("\n");
     return global_sol;
 }
-
-float first_metric(int *GLOBAL_COST){
-    float sum_1=0.0;
-    for (int i=0;i<N_GPU*M;i++)
-        sum_1+=(float)(GLOBAL_COST[i]-GLOBAL_COST[0]);
-    sum_1/=(float)(N_GPU*M);
-    sum_1/=(float)GLOBAL_COST[0];
-    return sum_1;
-}
-float second_metric(int *GLOBAL_COST,int best_global){
-    float sum_1=0.0;
-    for (int i=0;i<N_GPU*M;i++){
-	sum_1+=(float)(GLOBAL_COST[i]-best_global);
-    }
-    sum_1/=(float)(N_GPU*M);
-    sum_1/=(float)best_global;
-    return sum_1;
-}
 void SAVE_PHEROMONE_MATRIX(float *PHEROMONE_MATRIX,int it, int experiment,float alpha,float beta,float e){
     FILE *file1;
     std::string file_name = name_test_7;
@@ -573,4 +513,46 @@ void SAVE_PHEROMONE_MATRIX(float *PHEROMONE_MATRIX,int it, int experiment,float 
         fprintf(file1,"\n");
     }
     fclose(file1);
+}
+void SAVE_LAST_IMRPOVED(int LAST_IMRPOVE_IT,int BEST_SOLUTION,int experiment){
+    FILE *file1;
+    std::string file_name = name_test_9;
+    file_name+=problem;
+    file_name+=".csv";
+    file1 = fopen(file_name.c_str(), "a");
+    if(file1 == NULL)
+    {
+        printf("Error opening file, to write to it."); //archivo para guardar las iteraciones 
+    }
+    else
+    {
+	fprintf(file1,"%d,%d,%d",experiment,BEST_SOLUTION,LAST_IMRPOVE_IT);
+        fprintf(file1,"\n");
+    }	
+}
+void escribir_costo(int *HORMIGAS_COSTOS,int x){
+	FILE *file1;
+        std::string file_name = name_test_5;
+        file_name+=problem;
+        file_name+=".csv";
+	file1 = fopen(file_name.c_str(), "a");
+	if(file1 == NULL){
+        	printf("Error opening file, to write to it."); //archivo para guardar las iteraciones 
+	}
+	 else{
+		 for (int it=0;it<ITERACION;it++){
+     	            fprintf(file1,"%d,",x);
+                    for (int i=0;i<4*M;i++){
+	                if (i==0){
+		          fprintf(file1,"%d,%d",it,HORMIGAS_COSTOS[i+N_GPU*M*it]);
+                     	}
+		     	else{
+			   fprintf(file1,",%d",HORMIGAS_COSTOS[i+N_GPU*M*it]);
+			}
+	             }
+		     fprintf(file1,"\n");
+	        }
+		         
+	 }
+	fclose(file1);
 }

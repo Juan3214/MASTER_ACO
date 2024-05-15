@@ -19,22 +19,29 @@ __global__ void GPU_shannon_entropy_p_r(float *PHEROMONE_MATRIX,int *ROUTE,int *
 	}
 	PROB_ROUTE[i]=sum_phero;
 }
-__global__ void iniciar_kernel(curandState *state,int di){
+__global__ void iniciar_kernel(curandState *state,int di,unsigned long long seed){
     int i=threadIdx.x+ (blockIdx.x * blockDim.x);
-    curand_init((unsigned long long)clock() + i+M*di, 0, 0, &state[i]);
+    if (seed==1000){
+	printf("\n hola \n");
+    	curand_init((unsigned long long)clock() + (unsigned long long)(i+M*di), 0, 0, &state[i]);
+    }
+    else{
+    	curand_init(seed + (unsigned long long)(i+M*di), 0, 0, &state[i]);
+    }
 } 
 __global__ void ANT_SOLUTION_CONSTRUCT(float *HEURISTIC_PHEROMONE,float *NODE_COORDINATE_2D,
-int di,int *PREDECESSOR_ROUTE,int *SUCCESSOR_ROUTE,
-int max_new_edges,curandState *state,int *NN_LIST,int *NEW_LIST,int *NEW_LIST_INDX){
+int di,int *PREDECESSOR_ROUTE,int *SUCCESSOR_ROUTE,int *POS_IN_ROUTE,int *ROUTE_OP,
+int max_new_edges,curandState *state,int *NN_LIST,int *NEW_LIST,int *NEW_LIST_INDX,int *RANDOM_DEBUG,int flag_source_solution){
     int i=threadIdx.x+ (blockIdx.x * blockDim.x);
     int id=threadIdx.x;
     if (i<M){
         int loc_act;int j=0;int new_edges=0;
         curandState localstate=state[i];
         float myrandf = curand_uniform(&localstate);
-        myrandf *= (N-2 + 0.999999);
+        myrandf *= (N-1 + 0.999999);
         myrandf += 0;
         int random = (int)truncf(myrandf);
+	RANDOM_DEBUG[i*N]=random;
        
         CHECK_VISITED(NEW_LIST,NEW_LIST_INDX,i,random);
         int pos;  
@@ -72,38 +79,41 @@ int max_new_edges,curandState *state,int *NN_LIST,int *NEW_LIST,int *NEW_LIST_IN
             if (CHOSEN_NODE==loc_act){
                 for(int r=0;r<1000;r++)printf("\n ERROR \n");
             }
+	    RANDOM_DEBUG[i*N+j+1]=CHOSEN_NODE;
             
             j++;
             //desde aqui es mas codigo del polaco
             //se rellena con la ruta original
-            if (SUCCESSOR_ROUTE[loc_act]!=CHOSEN_NODE){
-                new_edges+=1;
-                //local_search_list[i*(N+1)+new_edges]=j;
-            }
-            int u;
-            if (new_edges>=max_new_edges){
-                u=SUCCESSOR_ROUTE[CHOSEN_NODE];
-                //if(i==0)printf("\n new edges %d \n",new_edges);
-                while (IS_VISITED(NEW_LIST,NEW_LIST_INDX,i,u)==false && j<N-1){
-                    
-                    
-                    CHECK_VISITED(NEW_LIST,NEW_LIST_INDX,i,u);
-                    u=SUCCESSOR_ROUTE[u];
-                    
-                    j++; 
-                    //printf("\n yes yes");
-                }
-                u=PREDECESSOR_ROUTE[u];
-                //if (i==0)printf("\n %d y j %d",d_rute_pred[u],j);
-                
-                while (IS_VISITED(NEW_LIST,NEW_LIST_INDX,i,u)==false && j<N-1){ 
-                    CHECK_VISITED(NEW_LIST,NEW_LIST_INDX,i,u);
-                    u=PREDECESSOR_ROUTE[u];
-                    //printf("\n yes no");
-                    j++;
-                }    
-            }
-        }
+	    if (flag_source_solution==1){
+		    if (SUCCESSOR_ROUTE[loc_act]!=CHOSEN_NODE){
+			new_edges+=1;
+			//local_search_list[i*(N+1)+new_edges]=j;
+		    }
+		    int u;
+		    if (new_edges>=max_new_edges){
+			int pos_in_route=POS_IN_ROUTE[CHOSEN_NODE];
+			u = (pos_in_route == 0) ? ROUTE_OP[N-1] : ROUTE_OP[pos_in_route-1];
+			//u=SUCCESSOR_ROUTE[CHOSEN_NODE];
+			while (IS_VISITED(NEW_LIST,NEW_LIST_INDX,i,u)==false && j<N-1){
+			    CHECK_VISITED(NEW_LIST,NEW_LIST_INDX,i,u);
+			    pos_in_route = POS_IN_ROUTE[u];
+			    u = (pos_in_route == 0) ? ROUTE_OP[N-1] : ROUTE_OP[pos_in_route-1];
+			    //u=SUCCESSOR_ROUTE[u];
+			    j++; 
+			}
+			pos_in_route=POS_IN_ROUTE[u];
+			u = (pos_in_route == N-1) ? ROUTE_OP[0] : ROUTE_OP[pos_in_route+1];
+			//u=PREDECESSOR_ROUTE[u];
+			while (IS_VISITED(NEW_LIST,NEW_LIST_INDX,i,u)==false && j<N-1){ 
+			    CHECK_VISITED(NEW_LIST,NEW_LIST_INDX,i,u);
+			    pos_in_route = POS_IN_ROUTE[u];
+			    u = (pos_in_route == N-1) ? ROUTE_OP[0] : ROUTE_OP[pos_in_route+1];
+			    //u=PREDECESSOR_ROUTE[u];
+			    j++;
+			}    
+		    }
+       		}
+	}
         //local_search_list[i*(N+1)]=new_edges;
         state[i]=localstate;
     }
@@ -292,9 +302,7 @@ __device__ void opt3(int *ROUTE,float *NODE_COORDINATE_2D,int *COST,int k,int *R
         pos[2]=pos[1];
         pos[1]=temp;
     }  
-    int delta0=pos[1]-pos[0];int delta1=pos[2]-pos[1];int aux=0;
-    
-    int d0,d1,d2,d3,d4,d5,d6,d7,change1,change2,change3,change4,change5,change6,change7;
+    int delta0=pos[1]-pos[0];int delta1=pos[2]-pos[1];int aux=0; int d0,d1,d2,d3,d4,d5,d6,d7,change1,change2,change3,change4,change5,change6,change7;
     
     
     
@@ -428,5 +436,27 @@ void make_candidate_list(int *d_NN_LIST_aux,int *d_DISTANCE_NODE,int *DISTANCE_N
     }
 }
 
-void make_initial_solution(){
+void UPGRADE_PHEROMONE(int *ROUTE,int *BEST_ANT,float *PHEROMONE_MATRIX,int *NN_LIST,int *COST,int *OPTIMAL_ROUTE,int BEST_GLOBAL_SOLUTION,
+		float tau_max,float tau_min,float e,int ACO_flag){
+	EVAPORATION<<<((N*cl+32-(N*cl%32)))/32,32>>>(PHEROMONE_MATRIX,e);
+	if (ACO_flag == 0){
+	    // RBAS
+            PHEROMONE_UPDATE<<<((N+32-(N%32)))/32,32>>>(ROUTE,BEST_ANT,PHEROMONE_MATRIX,NN_LIST,COST,OPTIMAL_ROUTE,BEST_GLOBAL_SOLUTION); 
+	}
+	else if (ACO_flag == 1){	
+            // MMAS
+	    PHEROMONE_CHECK_MMAS<<<((N*cl+32-(N*cl%32)))/32,32>>>(PHEROMONE_MATRIX, tau_max, tau_min);
+            PHEROMONE_UPDATE_MMAS<<<((N+32-(N%32)))/32,32>>>(ROUTE,BEST_ANT,PHEROMONE_MATRIX,NN_LIST,COST,OPTIMAL_ROUTE,BEST_GLOBAL_SOLUTION); 
+
+	    PHEROMONE_CHECK_MMAS<<<((N*cl+32-(N*cl%32)))/32,32>>>(PHEROMONE_MATRIX, tau_max, tau_min);
+	}
+	else if (ACO_flag == 2){
+	    // AS
+	    PHEROMONE_UPDATE_AS<<<((N+32-(N%32)))/32,32>>>(ROUTE,BEST_ANT,PHEROMONE_MATRIX,NN_LIST,COST,OPTIMAL_ROUTE,BEST_GLOBAL_SOLUTION); 
+
+	}
+	else{
+		printf("\n ERROR ELEGIR ALGORITMO ACO \n");
+		exit(1);
+	}
 }

@@ -18,17 +18,19 @@
 #include <thrust/sort.h>
 #include <thrust/fill.h>
 #define N_GPU 2
-#define N_e 5 
-#define ITERACION 3000
-#define M 512    //a partir de 512 si duplico 
+#define N_e 10 
+#define ITERACION 1000 
+#define M 1024 //a partir de 512 si duplico 
 #define n_new_edge 8
 #define Q 1 // 
 #define n_best 10
-#define N 442 
-#define LS_ITERATION 0
+#define N 51
+#define LS_ITERATION 0 
 #define c_l 32
 #define cl 32
-#define problem "pcb442" //solo hay que cambiar este
+#define s_s_flag 1
+#define ACO_ALG 0 // 0 RBAS 1 MMAS 2 AS
+#define problem "eil51" //solo hay que cambiar este
 #define name_e "problems/"
 #define name_test_1 "iteration_time/iteration_time_"
 #define name_test_2 "iteration_time_series/interation_time_"
@@ -37,7 +39,8 @@
 #define name_test_5 "hormigas/recorridos_"
 #define name_test_6 "hormigas/metricas_"
 #define name_test_7 "matrices/ENTROPY_"
-#define name_test_8 "matrices/ENTROPY_VECTOR_PHERO_MMAS_"
+#define name_test_8 "matrices/ENTROPY_VECTOR_PHERO_RBAS_"
+#define name_test_9 "matrices/LAST_IMPROVE_RBAS_"
 #define solucion 426 //eil51
 //mona-lisa100K
 //#define solucion 7542.0 //berlin52
@@ -53,18 +56,16 @@
 //#define solucion 50778.0 //pcb442
 //#define solucion 2763.0 //pa561
 // fnl4461
+void escribir_costo(int *HORMIGAS_COSTOS,int x);
+void SAVE_LAST_IMRPOVED(int LAST_IMRPOVE_IT,int BEST_SOLUTION,int experiment);
 void guardar_entropias_pheromone(float *ENTROPY_VECTOR_PHEROMONE,float *ENTROPY_VECTOR_PHEROMONE_H,float alpha,float beta, float e,int it,int x);
 void guardar_resultados(float *vec_warm_up_time,int *vec_solution,float *vec_ant_iteration_time_series,float *vec_iteration_time,float alpha,float beta,float e );
-void shannon_entropy_pheromone(float *PHEROMONE_MATRIX,float *PROB_MATRIX,float *ENTROPY_VECTOR);
+float shannon_entropy_pheromone(float *PHEROMONE_MATRIX,float *PROB_MATRIX,float *ENTROPY_VECTOR,int flag);
 float shannon_entropy_p_r(float *PHEROMONE_MATRIX,int *ROUTE,int *NN_LIST,float *PROB_ROUTE,float last_entropy,float *ENTROPY_ITERATION,int it);
 void lectura_2(float *dis);
 void SAVE_PHEROMONE_MATRIX(float *PHEROMONE_MATRIX,int it, int expriment,float alpha,float beta,float e);
 //-------------------------------------------------------------------------------------
 int rutainicial_2(int *rute_op,float *d,bool *lista_vis);
-void escribir_costo(int *HORMIGAS_COSTOS,int x);
-void save_c1_and_c2(float c_1,float c_2,int it, int x);
-float first_metric(int *GLOBAL_COST);
-float second_metric(int *GLOBAL_COST,int best_global);
 void guardar_warm_up(float *time,float alpha,float beta,float e);
 void guardar_iteration_time(float *time,float alpha,float beta,float e);
 void guardar_soluciones(int *soluciones,float alpha,float beta,float e);
@@ -78,7 +79,8 @@ int EUC_2D_C(float *d_d,int p1,int p2);
 void CHECK_VISITED_CPU(int *NEW_LIST,int *NEW_LIST_INDX,int ant,int CHOSEN_NODE);
 bool IS_VISITED_CPU(int *NEW_LIST,int *NEW_LIST_INDX,int ant,int j);
 int GET_CANDIDATE_CPU(int *NEW_LIST,int *NEW_LIST_INDX,int ant,int j);
-int rutainicial(int *rute_op,float *d,int *NEW_LIST_GLOBAL,int *NEW_LIST_INDX_GLOBAL,int *NN_LIST);
+int rutainicial(int *rute_op,float *d,int *NEW_LIST_GLOBAL,int *NEW_LIST_INDX_GLOBAL,int *NN_LIST,int *POS_IN_ROUTE);
+void UPGRADE_PHEROMONE(int *ROUTE,int *BEST_ANT,float *PHEROMONE_MATRIX,int *NN_LIST,int *COST,int *OPTIMAL_ROUTE,int BEST_GLOBAL_SOLUTION,float tau_max,float tau_min,float e,int ACO_flag);
 /*
 *This function free the memory for the given vectores
 */
@@ -121,11 +123,11 @@ __global__ void HEURISTIC_PHEROMONE_CALCULATION(float *NODE_COORDINATE,float *PH
 __global__ void RESET_VISITED_LIST(bool *VISITED_LIST);
 __global__ void EVAPORATION(float *PHEROMONE_MATRIX,float e);
 __global__ void ANT_SOLUTION_CONSTRUCT(float *HEURISTIC_PHEROMONE,float *NODE_COORDINATE_2D,int di,
-int *PREDECESSOR_ROUTE,int *SUCCESSOR_ROUTE,
-int max_new_edges,curandState *state,int *NN_LIST,int *NEW_LIST,int *NEW_LIST_INDX);
+int *PREDECESSOR_ROUTE,int *SUCCESSOR_ROUTE,int *POS_IN_ROUTE,int *ROUTE_OP,
+int max_new_edges,curandState *state,int *NN_LIST,int *NEW_LIST,int *NEW_LIST_INDX,int *RANDOM_DEBUG,int flag_source_solution);
 __global__ void ANT_COST_CALCULATION_LS(int *ROUTE,int *COST,float *NODE_COORDINATE_2D,int *ROUTE_AUX,curandState *state);
 __global__ void PHEROMONE_UPDATE(int *ROUTE,int *BEST_ANT,float *PHEROMONE_MATRIX,int *NN_LIST,int *COST,int *OPTIMAL_ROUTE,int BEST_GLOBAL_SOLUTION);
-__global__ void iniciar_kernel(curandState *state,int di);
+__global__ void iniciar_kernel(curandState *state,int di,unsigned long long seed=1000);
 __device__ void L_S(float *d_d,int *d_rute,float *d_global_cost,int *local_search_list,
 int *d_rute_succ_all,int *d_rute_pred_all,int *d_orden_indice,int i);
 __device__ void opt3(int *ROUTE,float *NODE_COORDINATE_2D,int *COST,int k,int *ROUTE_AUX,curandState *state);
