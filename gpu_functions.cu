@@ -1,6 +1,4 @@
 #include "mgpu.h"
-//no necesito list local search particular por gpu . borrar
-// LOCAL SEARCH LIST GUARDA POSICION EN LA RUTA, NO VERTICES
 __global__ void GPU_shannon_entropy_p_r(float *PHEROMONE_MATRIX,int *ROUTE,int *NN_LIST,float *PROB_ROUTE,float last_entropy){
 	
     	int i=threadIdx.x+ (blockIdx.x * blockDim.x);
@@ -30,38 +28,40 @@ __global__ void iniciar_kernel(curandState *state,int di,unsigned long long seed
     }
 } 
 __global__ void ANT_SOLUTION_CONSTRUCT(float *HEURISTIC_PHEROMONE,float *NODE_COORDINATE_2D,
-int di,int *PREDECESSOR_ROUTE,int *SUCCESSOR_ROUTE,int *POS_IN_ROUTE,int *ROUTE_OP,
+int di, int *POS_IN_ROUTE,int *ROUTE_OP,int *POS_IN_ROUTE_ANT,
 int max_new_edges,curandState *state,int *NN_LIST,int *NEW_LIST,int *NEW_LIST_INDX,int *RANDOM_DEBUG,int flag_source_solution){
     int i=threadIdx.x+ (blockIdx.x * blockDim.x);
     int id=threadIdx.x;
-    if (i<M){
+    if (i<100){
         int loc_act;int j=0;int new_edges=0;
         curandState localstate=state[i];
-        float myrandf = curand_uniform(&localstate);
-        myrandf *= (N-1 + 0.999999);
+        NEW_LIST[i*(N+1)+N]=N;
+	float myrandf = curand_uniform(&localstate);
+        myrandf *= (N - 2 + 0.999999);
         myrandf += 0;
         int random = (int)truncf(myrandf);
 	RANDOM_DEBUG[i*N]=random;
-       
         CHECK_VISITED(NEW_LIST,NEW_LIST_INDX,i,random);
+	POS_IN_ROUTE_ANT[i*N+random]=0;
         int pos;  
 
         __shared__ float prob[(c_l)*4];
         while(j<N-1){
-            loc_act=NEW_LIST[i*(N+1)+NEW_LIST[i*(N+1)+N]]; //locacion actual
-             //se marca como visitada
-            prob[id*cl]=HEURISTIC_PHEROMONE[loc_act*cl]*(1-(int)(IS_VISITED(NEW_LIST,NEW_LIST_INDX,i,NN_LIST[loc_act*cl]))); //si fue visitada la probabilidad es 0
+            loc_act=NEW_LIST[i*(N+1)+NEW_LIST[i*(N+1)+N]]; // ACTUAL LOCATION
+             // CHECK AS VISITED
+            prob[id*cl]=HEURISTIC_PHEROMONE[loc_act*cl]*(float)(1-(int)(IS_VISITED(NEW_LIST,NEW_LIST_INDX,i,NN_LIST[loc_act*cl]))); // IF IT WAS VISTED, THE PROBABILITY IS 0
             for (int k=1;k<cl;k++){
                     pos=NN_LIST[loc_act*cl+k];
-                    prob[id*cl+k]=prob[id*cl+k-1]+HEURISTIC_PHEROMONE[loc_act*cl+k]*(1-(int)(IS_VISITED(NEW_LIST,NEW_LIST_INDX,i,pos)));
+                    prob[id*cl+k]=prob[id*cl+k-1]+HEURISTIC_PHEROMONE[loc_act*cl+k]*(float)(1-(int)(IS_VISITED(NEW_LIST,NEW_LIST_INDX,i,pos)));
             }
             float val =  curand_uniform(&localstate);
             float ranval=val*prob[id*cl+cl-1];
             int CHOSEN_NODE=-9;
             for (int ran=0;ran<cl;ran++){
                 if (ranval<=prob[id*cl+ran]){
-                    CHOSEN_NODE=NN_LIST[loc_act*cl+ran]; //revisar indices
-                    break;
+		    if (IS_VISITED(NEW_LIST,NEW_LIST_INDX,i,NN_LIST[loc_act*cl+ran])==false)
+                    	CHOSEN_NODE=NN_LIST[loc_act*cl+ran]; 
+                    	break;
                 }
             }
             if (ranval==0.0){
@@ -70,46 +70,48 @@ int max_new_edges,curandState *state,int *NN_LIST,int *NEW_LIST,int *NEW_LIST_IN
                     int candidate=GET_CANDIDATE(NEW_LIST,NEW_LIST_INDX,i,k);
                     dist=EUC_2D(NODE_COORDINATE_2D,candidate,loc_act);
                     if (IS_VISITED(NEW_LIST,NEW_LIST_INDX,i,candidate)==false && dist<min ){
-                        CHOSEN_NODE=candidate; //revisar indices
+                        CHOSEN_NODE=candidate; 
                         min=dist;
                     }
                 }
             }
             CHECK_VISITED(NEW_LIST,NEW_LIST_INDX,i,CHOSEN_NODE);
-            if (CHOSEN_NODE==loc_act){
-                for(int r=0;r<1000;r++)printf("\n ERROR \n");
-            }
-	    RANDOM_DEBUG[i*N+j+1]=CHOSEN_NODE;
-            
             j++;
-            //desde aqui es mas codigo del polaco
-            //se rellena con la ruta original
+	    POS_IN_ROUTE_ANT[i*N+j]=CHOSEN_NODE;
 	    if (flag_source_solution==1){
-		    if (SUCCESSOR_ROUTE[loc_act]!=CHOSEN_NODE){
-			new_edges+=1;
-			//local_search_list[i*(N+1)+new_edges]=j;
-		    }
 		    int u;
+		    int pos_in_route;
+		    pos_in_route = POS_IN_ROUTE[loc_act];
+		    u = (pos_in_route == 0) ? ROUTE_OP[N-1] : ROUTE_OP[pos_in_route-1];
+		    if (u == CHOSEN_NODE){
+			new_edges+=1;
+			//local_search_list[i*(N+1)+new_edges]=j; // I NEED TO CHANGE THIS, SAVE THE NODES
+		    }
 		    if (new_edges>=max_new_edges){
-			int pos_in_route=POS_IN_ROUTE[CHOSEN_NODE];
-			u = (pos_in_route == 0) ? ROUTE_OP[N-1] : ROUTE_OP[pos_in_route-1];
-			//u=SUCCESSOR_ROUTE[CHOSEN_NODE];
+			pos_in_route=POS_IN_ROUTE[CHOSEN_NODE];
+			u = (pos_in_route == 0) ? ROUTE_OP[N-1] : ROUTE_OP[pos_in_route-1]; // THIS IS GOING BACKWARDS BECAUSE THE CHANGE ON THE ROUTE DATA STRUCTURE 
 			while (IS_VISITED(NEW_LIST,NEW_LIST_INDX,i,u)==false && j<N-1){
 			    CHECK_VISITED(NEW_LIST,NEW_LIST_INDX,i,u);
+			    if (loc_act == u)printf("\nERROR EN SOURCE %d",loc_act);
+			    loc_act=u;
 			    pos_in_route = POS_IN_ROUTE[u];
 			    u = (pos_in_route == 0) ? ROUTE_OP[N-1] : ROUTE_OP[pos_in_route-1];
-			    //u=SUCCESSOR_ROUTE[u];
+                	    if(NEW_LIST[i*(N+1)+N]!=N-2-j)for(int r=0;r<1;r++)printf("\n SOURCE SYCC ERROR l %d c %d noden %d el j %d\n",i,u,NEW_LIST[i*(N+1)+N],j);
 			    j++; 
+			    POS_IN_ROUTE_ANT[i*N+u] = j;
+
 			}
 			pos_in_route=POS_IN_ROUTE[u];
 			u = (pos_in_route == N-1) ? ROUTE_OP[0] : ROUTE_OP[pos_in_route+1];
-			//u=PREDECESSOR_ROUTE[u];
 			while (IS_VISITED(NEW_LIST,NEW_LIST_INDX,i,u)==false && j<N-1){ 
 			    CHECK_VISITED(NEW_LIST,NEW_LIST_INDX,i,u);
+			    if (loc_act == u)printf("\nERROR EN SOURCE %d",loc_act);
+			    loc_act=u;
 			    pos_in_route = POS_IN_ROUTE[u];
 			    u = (pos_in_route == N-1) ? ROUTE_OP[0] : ROUTE_OP[pos_in_route+1];
-			    //u=PREDECESSOR_ROUTE[u];
+                	    if(NEW_LIST[i*(N+1)+N]!=N-2-j)for(int r=0;r<1;r++)printf("\nSOURCE PRED ERROR l %d c %d noden %d el j %d\n",i,u,NEW_LIST[i*(N+1)+N],j);
 			    j++;
+	    		    POS_IN_ROUTE_ANT[i*N+u] = j;
 			}    
 		    }
        		}
@@ -119,15 +121,16 @@ int max_new_edges,curandState *state,int *NN_LIST,int *NEW_LIST,int *NEW_LIST_IN
     }
 }
 __device__ void CHECK_VISITED(int *NEW_LIST,int *NEW_LIST_INDX,int ant,int CHOSEN_NODE){
+    int ant_offset = ant*(N+1);
     int length=NEW_LIST[ant*(N+1)+N]-1;
     int CHOSEN_INDX=NEW_LIST_INDX[ant*(N+1)+CHOSEN_NODE];
     int temp_1=NEW_LIST[ant*(N+1)+length];
     int temp_2=NEW_LIST_INDX[ant*(N+1)+temp_1]  ;
-    NEW_LIST[ant*(N+1)+length]=CHOSEN_NODE;
-    NEW_LIST_INDX[ant*(N+1)+temp_1]=CHOSEN_INDX;
-    NEW_LIST[ant*(N+1)+CHOSEN_INDX]=temp_1;
-    NEW_LIST_INDX[ant*(N+1)+CHOSEN_NODE]=temp_2;
-    NEW_LIST[ant*(N+1)+N]-=1;
+    NEW_LIST[ant_offset+length]=CHOSEN_NODE;
+    NEW_LIST_INDX[ant_offset+temp_1]=CHOSEN_INDX;
+    NEW_LIST[ant_offset+CHOSEN_INDX]=temp_1;
+    NEW_LIST_INDX[ant_offset+CHOSEN_NODE]=temp_2;
+    NEW_LIST[ant_offset+N]-=1;
 }
 
 __device__ bool IS_VISITED(int *NEW_LIST,int *NEW_LIST_INDX,int ant,int j){
@@ -142,16 +145,17 @@ __device__ int GET_CANDIDATE(int *NEW_LIST,int *NEW_LIST_INDX,int ant,int j){
     return NEW_LIST[ant*(N+1)+j];
 }
 __global__ void LIST_INIT(int *d_NEW_LIST,int *d_NEW_LIST_INDX){
-     //estas son las hormigas
-    int j=blockIdx.x; //estas son las ciudades
+    int j=blockIdx.x; // HERE, EVERY THREAD IS A CITY
     if (j<N){
         for (int i=threadIdx.x;i<M;i+=blockDim.x){
+	if (i<M){
         if (j==0){
             d_NEW_LIST[i*(N+1)+N]=N;
             d_NEW_LIST_INDX[i*(N+1)+N]=N;
         }
         d_NEW_LIST[i*(N+1)+j]=j;
         d_NEW_LIST_INDX[i*(N+1)+j]=j;
+	}
     }
     }
 }
@@ -202,15 +206,28 @@ __global__ void PHEROMONE_UPDATE_AS(int *ROUTE,int *BEST_ANT,float *PHEROMONE_MA
 }
 __global__ void PHEROMONE_UPDATE_MMAS(int *ROUTE,int *BEST_ANT,
 float *PHEROMONE_MATRIX,int *NN_LIST,int *COST,int *OPTIMAL_ROUTE,
-int BEST_GLOBAL_SOLUTION){
+int BEST_GLOBAL_SOLUTION,int update_flag){
     int j=threadIdx.x+ (blockIdx.x * blockDim.x);
     if (j<N){
-    int k;
-    for (k=0;k<cl;k++){
-        if (OPTIMAL_ROUTE[j+1]==NN_LIST[OPTIMAL_ROUTE[j]*cl+k]){
-            PHEROMONE_MATRIX[OPTIMAL_ROUTE[j]*cl+k]+=1.0/((float)BEST_GLOBAL_SOLUTION);
-        }
-    }
+	int k;
+	if ( 0 == update_flag){
+	    for (k=0;k<cl;k++){
+		if (OPTIMAL_ROUTE[j+1]==NN_LIST[OPTIMAL_ROUTE[j]*cl+k]){
+		    PHEROMONE_MATRIX[OPTIMAL_ROUTE[j]*cl+k]+=1.0/((float)BEST_GLOBAL_SOLUTION);
+		}
+	    }
+	}
+	else if ( 1 == update_flag ){
+	    int actual_node = ROUTE[BEST_ANT[0]*(N+1)+j%N];
+	    int next_node = ROUTE[BEST_ANT[0]*(N+1)+(j+1)%N];
+            for (k=0;k<cl;k++){
+            	if (next_node == NN_LIST[actual_node*cl+k]){
+                	PHEROMONE_MATRIX[actual_node*cl+k]+=1.0/((float)COST[0]);
+
+            	}
+            }
+	    	
+	}
     }
 }
 __global__ void PHEROMONE_CHECK_MMAS(float *PHEROMONE_MATRIX,float tau_max,float tau_min){
@@ -413,10 +430,10 @@ __device__ void opt3(int *ROUTE,float *NODE_COORDINATE_2D,int *COST,int k,int *R
     }
     //printf("\n");
 }
-
 void make_candidate_list(int *d_NN_LIST_aux,int *d_DISTANCE_NODE,int *DISTANCE_NODE,float *NODE_COORDINATE_2D,int *NN_LIST_cl){
     int i,j;
     thrust::device_ptr<int> dev_inx_d = thrust::device_pointer_cast(d_NN_LIST_aux);
+ 
     thrust::device_ptr<int> dev_d = thrust::device_pointer_cast(d_DISTANCE_NODE);
     for (i=0;i<N;i++){
         if (i%1000==0){
@@ -426,7 +443,7 @@ void make_candidate_list(int *d_NN_LIST_aux,int *d_DISTANCE_NODE,int *DISTANCE_N
             DISTANCE_NODE[j]= EUC_2D_C(NODE_COORDINATE_2D,i,j); 
         }
         cudaMemcpy(d_DISTANCE_NODE,DISTANCE_NODE,N*sizeof(int),cudaMemcpyHostToDevice);
-        thrust::sequence(thrust::device,dev_inx_d, dev_inx_d+N); // se ordenan de menor distancia a mayor distancia
+        thrust::sequence(thrust::device,dev_inx_d, dev_inx_d+N); //  HERE, WE SORT THE DISTANCES FOR THE NN_LIST
         thrust::sort_by_key(thrust::device,dev_d, dev_d +N, dev_inx_d,thrust::less<int>());
         cudaDeviceSynchronize();
         cudaMemcpy(NN_LIST_cl+i*cl,d_NN_LIST_aux+1,cl*sizeof(int),cudaMemcpyDeviceToHost);
@@ -445,8 +462,12 @@ void UPGRADE_PHEROMONE(int *ROUTE,int *BEST_ANT,float *PHEROMONE_MATRIX,int *NN_
 	}
 	else if (ACO_flag == 1){	
             // MMAS
+	    srand(time(NULL));
+	    float randu = (float)rand()/(float)RAND_MAX; 
+            int MMAS_flag = (randu<0.1) ? 1 : 0 ;
 	    PHEROMONE_CHECK_MMAS<<<((N*cl+32-(N*cl%32)))/32,32>>>(PHEROMONE_MATRIX, tau_max, tau_min);
-            PHEROMONE_UPDATE_MMAS<<<((N+32-(N%32)))/32,32>>>(ROUTE,BEST_ANT,PHEROMONE_MATRIX,NN_LIST,COST,OPTIMAL_ROUTE,BEST_GLOBAL_SOLUTION); 
+            
+	    PHEROMONE_UPDATE_MMAS<<<((N+32-(N%32)))/32,32>>>(ROUTE,BEST_ANT,PHEROMONE_MATRIX,NN_LIST,COST,OPTIMAL_ROUTE,BEST_GLOBAL_SOLUTION,0); 
 
 	    PHEROMONE_CHECK_MMAS<<<((N*cl+32-(N*cl%32)))/32,32>>>(PHEROMONE_MATRIX, tau_max, tau_min);
 	}
@@ -458,5 +479,70 @@ void UPGRADE_PHEROMONE(int *ROUTE,int *BEST_ANT,float *PHEROMONE_MATRIX,int *NN_
 	else{
 		printf("\n ERROR ELEGIR ALGORITMO ACO \n");
 		exit(1);
+	}
+}
+__device__ void swap(int *node_1,int *node_2){
+	int temp = *node_1;
+	*node_1 = *node_2;
+	*node_2 = temp;
+}
+__device__ void OPT_2_FACO(int *ROUTE, int *POS_IN_ROUTE_ANT, int *COST, int *LS_CHECKLIST, int *NN_LIST,float *NODE_COORDINATE_2D,int ANT){
+	/*make a local seach using the LS_CHECKLIST where the new edges are stored,
+	in this case using 2-OPT
+	 */		
+	int move[2] = {-1,-1};
+	int flag_2opt = -1; // = -1 no opt move, = 0 succ move, = 1 pred move 
+	int i,j;
+	int LS_OFFSET = ANT*cl;
+	int ROUTE_OFFSET = ANT*(N+1);
+	int POS_IN_R_OFFSET = ANT*N;
+	int node_X1, node_X2,pos_in_route_x1,pos_in_route_x2;
+	int d0,d1,gain,x1_succ_distance,x1_x2_distance,x1_pred_distance;
+	int pos_x1_succ,pos_x1_pred,pos_x2_succ,pos_x2_pred;
+	for (i = 0; i < cl; i++){
+		gain = 0;
+		node_X1 = LS_CHECKLIST[LS_OFFSET+i];
+		pos_in_route_x1 = POS_IN_ROUTE_ANT[POS_IN_R_OFFSET+node_X1];
+		pos_x1_succ = (pos_in_route_x1+1)%N;
+		pos_x1_pred = (pos_in_route_x1 == 0) ? N-1 : pos_in_route_x1-1;
+		for (j = 0; j < cl; j++){
+			node_X2 = NN_LIST[node_X1*cl+j]; 
+			pos_in_route_x2 = POS_IN_ROUTE_ANT[POS_IN_R_OFFSET+node_X2];
+			pos_x2_succ = (pos_in_route_x2+1)%N;
+			x1_succ_distance=EUC_2D(NODE_COORDINATE_2D,ROUTE[ROUTE_OFFSET+pos_in_route_x1],ROUTE[ROUTE_OFFSET+pos_x1_succ]);
+			x1_x2_distance=EUC_2D(NODE_COORDINATE_2D,ROUTE[ROUTE_OFFSET+pos_in_route_x1],ROUTE[ROUTE_OFFSET+pos_in_route_x2]);
+			if (x1_succ_distance > x1_x2_distance){
+				d0 = EUC_2D(NODE_COORDINATE_2D,ROUTE[ROUTE_OFFSET+pos_in_route_x1],ROUTE[ROUTE_OFFSET+pos_x1_succ])+
+				EUC_2D(NODE_COORDINATE_2D,ROUTE[ROUTE_OFFSET+pos_in_route_x2],ROUTE[ROUTE_OFFSET+pos_x2_succ]);
+				d1 = EUC_2D(NODE_COORDINATE_2D,ROUTE[ROUTE_OFFSET+pos_in_route_x1],ROUTE[ROUTE_OFFSET+pos_in_route_x2])+
+				EUC_2D(NODE_COORDINATE_2D,ROUTE[ROUTE_OFFSET+pos_x1_succ],ROUTE[ROUTE_OFFSET+pos_x2_succ]);
+				if (d0 - d1 > gain){
+					gain = d0 - d1;
+					move[0] = node_X1;move[1] = node_X2;
+					flag_2opt = 0;
+				}
+			} 
+		}
+		for (j = 0; j < cl; j++){
+			node_X2 = NN_LIST[node_X1*cl+j]; 
+			pos_in_route_x2 = POS_IN_ROUTE_ANT[POS_IN_R_OFFSET+node_X2];
+			pos_x2_pred = (pos_in_route_x2 == 0) ?  N-1 : pos_in_route_x2-1;
+			x1_pred_distance=EUC_2D(NODE_COORDINATE_2D,ROUTE[ROUTE_OFFSET+pos_in_route_x1],ROUTE[ROUTE_OFFSET+pos_x1_pred]);
+			x1_x2_distance=EUC_2D(NODE_COORDINATE_2D,ROUTE[ROUTE_OFFSET+pos_in_route_x1],ROUTE[ROUTE_OFFSET+pos_in_route_x2]);
+			if (x1_pred_distance > x1_x2_distance){
+				d0 = EUC_2D(NODE_COORDINATE_2D,ROUTE[ROUTE_OFFSET+pos_in_route_x1],ROUTE[ROUTE_OFFSET+pos_x1_pred])+
+				EUC_2D(NODE_COORDINATE_2D,ROUTE[ROUTE_OFFSET+pos_in_route_x2],ROUTE[ROUTE_OFFSET+pos_x2_pred]);
+				d1 = EUC_2D(NODE_COORDINATE_2D,ROUTE[ROUTE_OFFSET+pos_in_route_x1],ROUTE[ROUTE_OFFSET+pos_in_route_x2])+
+				EUC_2D(NODE_COORDINATE_2D,ROUTE[ROUTE_OFFSET+pos_x1_pred],ROUTE[ROUTE_OFFSET+pos_x2_pred]);
+				if (d0 - d1 > gain){
+					gain = d0 - d1;
+					move[0] = node_X1;move[1] = node_X2;
+					flag_2opt = 1;
+				}
+			} 
+		}
+		if (flag_2opt != -1){
+// HERE I NEED TO MAKE THE SWAP
+		}
 	}
 }

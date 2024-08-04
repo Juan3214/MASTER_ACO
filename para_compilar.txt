@@ -1,1 +1,1 @@
-nvcc ACO_main.cu cpu_functions.cpp new_cpu_functions.cpp gpu_functions.cu -o test -Xcompiler -fopenmp
+nvcc ACO_main.cu cpu_functions.cpp new_cpu_functions.cpp gpu_functions.cu -o ACO_test -Xcompiler -fopenmp

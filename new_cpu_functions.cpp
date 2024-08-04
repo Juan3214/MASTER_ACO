@@ -7,6 +7,9 @@ float shannon_entropy_pheromone(float *PHEROMONE_MATRIX,float *PROB_MATRIX,float
 		float sum_prob=0.0;
 		float test=0.0;
 		for (j=0;j<cl;j++){
+			if (PHEROMONE_MATRIX[i*cl+j] == 0.0){
+				PHEROMONE_MATRIX[i*cl + j] = FLT_MIN;
+			}
 			sum_prob+= PHEROMONE_MATRIX[i*cl+j];
 		}
 		for (j=0;j<cl;j++){
@@ -31,10 +34,9 @@ float shannon_entropy_pheromone(float *PHEROMONE_MATRIX,float *PROB_MATRIX,float
 	if (flag == 1){
 		shannon_entropy=max;
 	}
-	if (flag != 1 && flag != 2){
+	if (flag != 0 && flag != 1){
 		printf("\n not suported, mean entropy is given");
 		shannon_entropy=prom;
 	}
 	return shannon_entropy;	
 }
-

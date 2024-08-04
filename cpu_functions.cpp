@@ -94,7 +94,9 @@ void guardar_entropias_pheromone(float *ENTROPY_VECTOR_PHEROMONE,float *ENTROPY_
     std::string file_name_1 = name_test_8;
     std::string file_name_2 = name_test_8;
     file_name_1+=problem;
+    file_name_1+=alg_name;
     file_name_2+=problem;
+    file_name_2+=alg_name;
     file_name_2+="_H";
     int i;
     file_name_1+=".csv";
@@ -124,6 +126,7 @@ void guardar_iteration_time(float *time,float alpha,float beta,float e){
     FILE *file1;
     std::string file_name = name_test_1;
     file_name+=problem;
+    file_name+=alg_name;
     file_name+=".csv";
     file1 = fopen(file_name.c_str(), "a");
     if(file1 == NULL)
@@ -149,6 +152,7 @@ void guardar_iteration_time_series(float *time,float alpha,float beta,float e){
     FILE *file1; 
     std::string file_name = name_test_2;
     file_name+=problem;
+    file_name+=alg_name;
     file_name+=".csv";
     file1 = fopen(file_name.c_str(), "a");
     int i;
@@ -168,12 +172,14 @@ void guardar_iteration_time_series(float *time,float alpha,float beta,float e){
         }
         fprintf(file1,"\n"); 
     }
+    fclose(file1);
 
 }
 void guardar_warm_up(float *time,float alpha,float beta,float e){
     FILE *file1;
     std::string file_name = name_test_3;
     file_name+=problem;
+    file_name+=alg_name;
     file_name+=".csv";
     file1 = fopen(file_name.c_str(), "a");
     if(file1 == NULL)
@@ -199,6 +205,7 @@ void guardar_soluciones(int *soluciones,float alpha,float beta,float e){
     FILE *file1;
     std::string file_name = name_test_4;
     file_name+=problem;
+    file_name+=alg_name;
     file_name+=".csv";
     file1 = fopen(file_name.c_str(), "a");
     if(file1 == NULL)
@@ -275,13 +282,13 @@ bool IS_VISITED_CPU(int *NEW_LIST,int *NEW_LIST_INDX,int ant,int j){
 int GET_CANDIDATE_CPU(int *NEW_LIST,int *NEW_LIST_INDX,int ant,int j){
     return NEW_LIST[ant*(N+1)+j];
 }
-int rutainicial(int *rute_op,float *d,int *NEW_LIST_GLOBAL,int *NEW_LIST_INDX_GLOBAL,int *NN_LIST,int *POS_IN_ROUTE){
+int rutainicial(int *rute_op,float *d,int *NEW_LIST_GLOBAL,int *NEW_LIST_INDX_GLOBAL,int *NN_LIST,int *POS_IN_ROUTE,int seed){
     int i,j;
     for (i=0;i<N+1;i++){
 	NEW_LIST_GLOBAL[i]=i;
 	NEW_LIST_INDX_GLOBAL[i]=i;
     }
-    srand(0);
+    srand(seed);
     int initial_node = rand()%(N);
     CHECK_VISITED_CPU(NEW_LIST_GLOBAL,NEW_LIST_INDX_GLOBAL,0,initial_node); 
     int cost=0;
@@ -494,6 +501,7 @@ void SAVE_PHEROMONE_MATRIX(float *PHEROMONE_MATRIX,int it, int experiment,float 
     file_name+=problem;
     file_name+="_"+std::to_string(alpha)+"_";
     file_name+=std::to_string(beta)+"_";
+    file_name+=alg_name;
     file_name+=".csv";
     file1 = fopen(file_name.c_str(), "a");
     if(file1 == NULL)
@@ -514,10 +522,12 @@ void SAVE_PHEROMONE_MATRIX(float *PHEROMONE_MATRIX,int it, int experiment,float 
     }
     fclose(file1);
 }
-void SAVE_LAST_IMRPOVED(int LAST_IMRPOVE_IT,int BEST_SOLUTION,int experiment){
+void SAVE_LAST_IMRPOVED(int LAST_IMRPOVE_IT,int BEST_SOLUTION,int experiment,float alpha,float beta){
     FILE *file1;
     std::string file_name = name_test_9;
     file_name+=problem;
+    file_name+="_";
+    file_name+=alg_name;
     file_name+=".csv";
     file1 = fopen(file_name.c_str(), "a");
     if(file1 == NULL)
@@ -526,14 +536,16 @@ void SAVE_LAST_IMRPOVED(int LAST_IMRPOVE_IT,int BEST_SOLUTION,int experiment){
     }
     else
     {
-	fprintf(file1,"%d,%d,%d",experiment,BEST_SOLUTION,LAST_IMRPOVE_IT);
+	fprintf(file1,"%d,%d,%f,%f,%d,%d",experiment,N_GPU*M,alpha,beta,BEST_SOLUTION,LAST_IMRPOVE_IT);
         fprintf(file1,"\n");
     }	
+    fclose(file1);
 }
 void escribir_costo(int *HORMIGAS_COSTOS,int x){
 	FILE *file1;
         std::string file_name = name_test_5;
         file_name+=problem;
+	file_name+=alg_name;
         file_name+=".csv";
 	file1 = fopen(file_name.c_str(), "a");
 	if(file1 == NULL){
@@ -555,4 +567,30 @@ void escribir_costo(int *HORMIGAS_COSTOS,int x){
 		         
 	 }
 	fclose(file1);
+}
+void guardar_entropia_promedio(float *entropia_shannon,float *entropia_shannon_h,int x,float alpha,float beta){
+	FILE *file1,*file2;
+        std::string file_name = name_test_10;
+        std::string file_name_2 = name_test_10;
+        file_name+=alg_name;
+        file_name_2+=alg_name;
+        file_name_2+=problem;
+        file_name_2+="_h";
+	file_name+=+problem;
+        file_name+=".csv";
+        file_name_2+=".csv";
+	file1 = fopen(file_name.c_str(), "a");
+	file2 = fopen(file_name_2.c_str(), "a");
+	if(file1 == NULL){
+        	printf("Error opening file, to write to it."); //archivo para guardar las iteraciones 
+	}
+	 else{
+		 for (int it=0;it<ITERACION;it++){
+		     fprintf(file1,"%d,%d,%d,%f,%f,%f\n",x,it,N_GPU*M,alpha,beta,entropia_shannon[it]);
+		     fprintf(file2,"%d,%d,%d,%f,%f,%f\n",x,it,N_GPU*M,alpha,beta,entropia_shannon_h[it]);
+	        }
+	}
+		          
+	fclose(file1);
+	fclose(file2);
 }
