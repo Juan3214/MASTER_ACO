@@ -29,10 +29,10 @@ __global__ void iniciar_kernel(curandState *state,int di,unsigned long long seed
 } 
 __global__ void ANT_SOLUTION_CONSTRUCT(float *HEURISTIC_PHEROMONE,float *NODE_COORDINATE_2D,
 int di, int *POS_IN_ROUTE,int *ROUTE_OP,int *POS_IN_ROUTE_ANT,
-int max_new_edges,curandState *state,int *NN_LIST,int *NEW_LIST,int *NEW_LIST_INDX,int *RANDOM_DEBUG,int flag_source_solution){
+int max_new_edges,curandState *state,int *NN_LIST,int *NEW_LIST,int *NEW_LIST_INDX,int *RANDOM_DEBUG,int *LS_CHECKLIST,int flag_source_solution){
     int i=threadIdx.x+ (blockIdx.x * blockDim.x);
     int id=threadIdx.x;
-    if (i<100){
+    if (i<M){
         int loc_act;int j=0;int new_edges=0;
         curandState localstate=state[i];
         NEW_LIST[i*(N+1)+N]=N;
@@ -42,7 +42,7 @@ int max_new_edges,curandState *state,int *NN_LIST,int *NEW_LIST,int *NEW_LIST_IN
         int random = (int)truncf(myrandf);
 	RANDOM_DEBUG[i*N]=random;
         CHECK_VISITED(NEW_LIST,NEW_LIST_INDX,i,random);
-	POS_IN_ROUTE_ANT[i*N+random]=0;
+	POS_IN_ROUTE_ANT[i*N+random]=N-1;
         int pos;  
 
         __shared__ float prob[(c_l)*4];
@@ -77,15 +77,15 @@ int max_new_edges,curandState *state,int *NN_LIST,int *NEW_LIST,int *NEW_LIST_IN
             }
             CHECK_VISITED(NEW_LIST,NEW_LIST_INDX,i,CHOSEN_NODE);
             j++;
-	    POS_IN_ROUTE_ANT[i*N+j]=CHOSEN_NODE;
+	    POS_IN_ROUTE_ANT[i*N+CHOSEN_NODE]=N - 1 - j;
 	    if (flag_source_solution==1){
 		    int u;
 		    int pos_in_route;
 		    pos_in_route = POS_IN_ROUTE[loc_act];
 		    u = (pos_in_route == 0) ? ROUTE_OP[N-1] : ROUTE_OP[pos_in_route-1];
-		    if (u == CHOSEN_NODE){
+		    if (u != CHOSEN_NODE){
 			new_edges+=1;
-			//local_search_list[i*(N+1)+new_edges]=j; // I NEED TO CHANGE THIS, SAVE THE NODES
+			LS_CHECKLIST[i*N+new_edges-1]=CHOSEN_NODE; // I NEED TO CHANGE THIS, SAVE THE NODES
 		    }
 		    if (new_edges>=max_new_edges){
 			pos_in_route=POS_IN_ROUTE[CHOSEN_NODE];
@@ -95,10 +95,10 @@ int max_new_edges,curandState *state,int *NN_LIST,int *NEW_LIST,int *NEW_LIST_IN
 			    if (loc_act == u)printf("\nERROR EN SOURCE %d",loc_act);
 			    loc_act=u;
 			    pos_in_route = POS_IN_ROUTE[u];
-			    u = (pos_in_route == 0) ? ROUTE_OP[N-1] : ROUTE_OP[pos_in_route-1];
                 	    if(NEW_LIST[i*(N+1)+N]!=N-2-j)for(int r=0;r<1;r++)printf("\n SOURCE SYCC ERROR l %d c %d noden %d el j %d\n",i,u,NEW_LIST[i*(N+1)+N],j);
 			    j++; 
-			    POS_IN_ROUTE_ANT[i*N+u] = j;
+			    POS_IN_ROUTE_ANT[i*N+u] = N - 1  - j;
+			    u = (pos_in_route == 0) ? ROUTE_OP[N-1] : ROUTE_OP[pos_in_route-1];
 
 			}
 			pos_in_route=POS_IN_ROUTE[u];
@@ -108,15 +108,14 @@ int max_new_edges,curandState *state,int *NN_LIST,int *NEW_LIST,int *NEW_LIST_IN
 			    if (loc_act == u)printf("\nERROR EN SOURCE %d",loc_act);
 			    loc_act=u;
 			    pos_in_route = POS_IN_ROUTE[u];
-			    u = (pos_in_route == N-1) ? ROUTE_OP[0] : ROUTE_OP[pos_in_route+1];
                 	    if(NEW_LIST[i*(N+1)+N]!=N-2-j)for(int r=0;r<1;r++)printf("\nSOURCE PRED ERROR l %d c %d noden %d el j %d\n",i,u,NEW_LIST[i*(N+1)+N],j);
 			    j++;
-	    		    POS_IN_ROUTE_ANT[i*N+u] = j;
+	    		    POS_IN_ROUTE_ANT[i*N+u] = N - 1 - j;
+			    u = (pos_in_route == N-1) ? ROUTE_OP[0] : ROUTE_OP[pos_in_route+1];
 			}    
 		    }
        		}
 	}
-        //local_search_list[i*(N+1)]=new_edges;
         state[i]=localstate;
     }
 }
@@ -168,7 +167,22 @@ __global__ void ANT_COST_CALCULATION_LS(int *ROUTE,int *COST,float *NODE_COORDIN
             SUMA+=EUC_2D(NODE_COORDINATE_2D,ROUTE[i*(N+1)+j],ROUTE[i*(N+1)+(j+1)%N]);
         }
         COST[i]=SUMA;
-        for (j=0;j<LS_ITERATION;j++)opt3(ROUTE,NODE_COORDINATE_2D,COST,i,ROUTE_AUX,state);
+	for (j=0;j<LS_ITERATION;j++)opt3(ROUTE,NODE_COORDINATE_2D,COST,i,ROUTE_AUX,state);
+    }
+}
+__global__ void ANT_COST_CALCULATION_FACO(int *ROUTE,int *COST,float *NODE_COORDINATE_2D,int *ROUTE_AUX,int *POS_IN_ROUTE,int *LS_CHECKLIST
+		,int *NN_LIST,curandState *state){
+    int i=threadIdx.x+ (blockIdx.x * blockDim.x);
+    if( i<M){
+        int j;
+        int SUMA=0;
+        for (j=0;j<N;j++){
+            SUMA+=EUC_2D(NODE_COORDINATE_2D,ROUTE[i*(N+1)+j],ROUTE[i*(N+1)+(j+1)%N]);
+        }
+        COST[i]=SUMA;
+	//for (j=0;j<LS_ITERATION;j++)opt3(ROUTE,NODE_COORDINATE_2D,COST,i,ROUTE_AUX,state);
+	OPT_2_FACO(ROUTE, POS_IN_ROUTE, COST, LS_CHECKLIST, NN_LIST,NODE_COORDINATE_2D,i);
+
     }
 }
 __global__ void PHEROMONE_UPDATE(int *ROUTE,int *BEST_ANT,float *PHEROMONE_MATRIX,int *NN_LIST,int *COST,int *OPTIMAL_ROUTE,int BEST_GLOBAL_SOLUTION){
@@ -486,29 +500,37 @@ __device__ void swap(int *node_1,int *node_2){
 	*node_1 = *node_2;
 	*node_2 = temp;
 }
+__device__ void make_swap_move_route(int current_change_x1,int current_change_x2,int *ROUTE,int *POS_IN_ROUTE,
+		int ROUTE_OFFSET,int POS_IN_R_OFFSET){
+	int current_node_x1 = ROUTE[ROUTE_OFFSET+current_change_x1];
+	int current_node_x2 = ROUTE[ROUTE_OFFSET+current_change_x2];
+	swap(&ROUTE[ROUTE_OFFSET+current_change_x1],&ROUTE[ROUTE_OFFSET+current_change_x2]);
+	swap(&POS_IN_ROUTE[POS_IN_R_OFFSET+current_node_x1],&POS_IN_ROUTE[POS_IN_R_OFFSET+current_node_x2]);
+}
 __device__ void OPT_2_FACO(int *ROUTE, int *POS_IN_ROUTE_ANT, int *COST, int *LS_CHECKLIST, int *NN_LIST,float *NODE_COORDINATE_2D,int ANT){
 	/*make a local seach using the LS_CHECKLIST where the new edges are stored,
 	in this case using 2-OPT
 	 */		
-	int move[2] = {-1,-1};
-	int flag_2opt = -1; // = -1 no opt move, = 0 succ move, = 1 pred move 
 	int i,j;
-	int LS_OFFSET = ANT*cl;
+	int LS_OFFSET = ANT*N;
 	int ROUTE_OFFSET = ANT*(N+1);
 	int POS_IN_R_OFFSET = ANT*N;
+	int pos_in_route_n_move_1,pos_in_route_n_move_2;
 	int node_X1, node_X2,pos_in_route_x1,pos_in_route_x2;
 	int d0,d1,gain,x1_succ_distance,x1_x2_distance,x1_pred_distance;
 	int pos_x1_succ,pos_x1_pred,pos_x2_succ,pos_x2_pred;
 	for (i = 0; i < cl; i++){
+		int move[2] = {-1,-1};
+		int flag_2opt = -1; // = -1 no opt move, = 0 succ move, = 1 pred move 
 		gain = 0;
 		node_X1 = LS_CHECKLIST[LS_OFFSET+i];
 		pos_in_route_x1 = POS_IN_ROUTE_ANT[POS_IN_R_OFFSET+node_X1];
-		pos_x1_succ = (pos_in_route_x1+1)%N;
-		pos_x1_pred = (pos_in_route_x1 == 0) ? N-1 : pos_in_route_x1-1;
+		pos_x1_pred = (pos_in_route_x1+1)%N;
+		pos_x1_succ = (pos_in_route_x1 == 0) ? N-1 : pos_in_route_x1-1;
 		for (j = 0; j < cl; j++){
 			node_X2 = NN_LIST[node_X1*cl+j]; 
 			pos_in_route_x2 = POS_IN_ROUTE_ANT[POS_IN_R_OFFSET+node_X2];
-			pos_x2_succ = (pos_in_route_x2+1)%N;
+			pos_x2_succ = (pos_in_route_x2 == 0) ?  N-1 : pos_in_route_x2-1;
 			x1_succ_distance=EUC_2D(NODE_COORDINATE_2D,ROUTE[ROUTE_OFFSET+pos_in_route_x1],ROUTE[ROUTE_OFFSET+pos_x1_succ]);
 			x1_x2_distance=EUC_2D(NODE_COORDINATE_2D,ROUTE[ROUTE_OFFSET+pos_in_route_x1],ROUTE[ROUTE_OFFSET+pos_in_route_x2]);
 			if (x1_succ_distance > x1_x2_distance){
@@ -526,7 +548,7 @@ __device__ void OPT_2_FACO(int *ROUTE, int *POS_IN_ROUTE_ANT, int *COST, int *LS
 		for (j = 0; j < cl; j++){
 			node_X2 = NN_LIST[node_X1*cl+j]; 
 			pos_in_route_x2 = POS_IN_ROUTE_ANT[POS_IN_R_OFFSET+node_X2];
-			pos_x2_pred = (pos_in_route_x2 == 0) ?  N-1 : pos_in_route_x2-1;
+			pos_x2_pred = (pos_in_route_x2+1)%N;
 			x1_pred_distance=EUC_2D(NODE_COORDINATE_2D,ROUTE[ROUTE_OFFSET+pos_in_route_x1],ROUTE[ROUTE_OFFSET+pos_x1_pred]);
 			x1_x2_distance=EUC_2D(NODE_COORDINATE_2D,ROUTE[ROUTE_OFFSET+pos_in_route_x1],ROUTE[ROUTE_OFFSET+pos_in_route_x2]);
 			if (x1_pred_distance > x1_x2_distance){
@@ -542,7 +564,52 @@ __device__ void OPT_2_FACO(int *ROUTE, int *POS_IN_ROUTE_ANT, int *COST, int *LS
 			} 
 		}
 		if (flag_2opt != -1){
-// HERE I NEED TO MAKE THE SWAP
+			int k;
+			pos_in_route_n_move_1=POS_IN_ROUTE_ANT[POS_IN_R_OFFSET+move[0]];
+			pos_in_route_n_move_2=POS_IN_ROUTE_ANT[POS_IN_R_OFFSET+move[1]];
+			if (pos_in_route_n_move_1 > pos_in_route_n_move_2) swap(&pos_in_route_n_move_1,&pos_in_route_n_move_2);
+			int delta = floor((float) (pos_in_route_n_move_2-pos_in_route_n_move_1)/2.0);
+			if (flag_2opt == 0){
+				//printf("bandera %d \n",flag_2opt);
+				//printf("Antes del cambio mov %d y %d \n", move[0],move[1]);
+				//printf("Antes del cambio pos %d y %d \n", pos_in_route_n_move_1,pos_in_route_n_move_2);
+				//for (k = 0; k < N;k++)printf("\033[22;34m%d \033[0m", k);
+				//printf("\n");
+				//for (k = 0; k < N;k++)printf("%d ", ROUTE[ROUTE_OFFSET+k]);
+				for (k = 0; k < delta; k++){
+					int current_change_x2 = pos_in_route_n_move_2-k-1; 
+					int current_change_x1 = pos_in_route_n_move_1+k; 
+					make_swap_move_route(current_change_x1,current_change_x2,ROUTE,POS_IN_ROUTE_ANT,
+					ROUTE_OFFSET,POS_IN_R_OFFSET);	
+				}
+				//printf("\n");
+				//printf("Despúes del cambio \n");
+				//for (k = 0; k < N;k++)printf("%d ", ROUTE[ROUTE_OFFSET+k]);
+				COST[ANT]-=gain;
+				//printf("con cost = %d \n",COST[ANT]);
+				// unos print para debugear
+			}
+			if (flag_2opt == 1){
+				//printf("bandera %d \n",flag_2opt);
+				//printf("Antes del cambio mov %d y %d \n", move[0],move[1]);
+				//printf("Antes del cambio pos %d y %d \n", pos_in_route_n_move_1,pos_in_route_n_move_2);
+				//for (k = 0; k < N;k++)printf("\033[22;34m%d \033[0m", k);
+				//printf("\n");
+				//for (k = 0; k < N;k++)printf("%d ", ROUTE[ROUTE_OFFSET+k]);
+				for (k = 0; k < delta; k++){
+					int current_change_x2 = pos_in_route_n_move_2-k; 
+					int current_change_x1 = pos_in_route_n_move_1+k+1; 
+					make_swap_move_route(current_change_x1,current_change_x2,ROUTE,POS_IN_ROUTE_ANT,
+					ROUTE_OFFSET,POS_IN_R_OFFSET);	
+				}
+				//printf("\n");
+				//printf("Despúes del cambio \n");
+				//for (k = 0; k < N;k++)printf("%d ", ROUTE[ROUTE_OFFSET+k]);
+				COST[ANT]-=gain;
+				//printf("con cost = %d \n",COST[ANT]);
+				//printf("con gain = %d \n",gain);
+				
+			}
 		}
 	}
 }

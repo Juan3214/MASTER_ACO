@@ -62,6 +62,7 @@ int main(){
         cudaEvent_t end_events[N_GPU];
         float prom_time=0.0;
         int *d_RANDOM_DEBUBG[N_GPU];
+	int *d_LOCAL_SEARCH_LIST_MGPU[N_GPU];
 	float tau_min,tau_max;
         float P_best=0.001,avg=(float)N/2.0;
         int *d_COST_MGPU[N_GPU];int *d_NN_LIST_CL_MGPU[N_GPU]; //4
@@ -125,7 +126,7 @@ int main(){
             cudaMalloc( (void **) &d_NEW_LIST_INDX[i], M*(N+1)*sizeof( int ) );
     	    cudaMalloc( (void **) &d_RANDOM_DEBUBG[i], M*N*sizeof(int) );//1
             cudaMalloc( (void **) &d_COST_MGPU[i], M*sizeof( int ) );//6
-            //cudaMalloc( (void **) &d_LOCAL_SEARCH_LIST_MGPU[i], M*N*sizeof( int ) );
+            cudaMalloc( (void **) &d_LOCAL_SEARCH_LIST_MGPU[i], M*N*sizeof( int ) );
             cudaMalloc( (void **) &d_NN_LIST_CL_MGPU[i], cl*N*sizeof( int ) ); //7
             cudaMemcpy(d_NN_LIST_CL_MGPU[i],NN_LIST_cl,(c_l*N)*sizeof(int),cudaMemcpyHostToDevice);
             cudaMalloc( (void **) &d_HEURISTIC_PHEROMONE_MGPU[i], N*cl*sizeof( float ) );//10
@@ -188,14 +189,16 @@ int main(){
                 LIST_INIT<<<N,min(M,1024)>>>(d_NEW_LIST[i],d_NEW_LIST_INDX[i]);
                 ANT_SOLUTION_CONSTRUCT<<<M/4,4>>>(d_HEURISTIC_PHEROMONE_MGPU[i],d_NODE_COORDINATE_MGPU[i],i,d_POS_IN_ROUTE_OP[i],
 				d_OPTIMAL_ROUTE_MGPU[i],d_POS_IN_ROUTE_MGPU[i],8,d_state[i],d_NN_LIST_CL_MGPU[i],
-				d_NEW_LIST[i],d_NEW_LIST_INDX[i],d_RANDOM_DEBUBG[i],s_s_flag);
+				d_NEW_LIST[i],d_NEW_LIST_INDX[i],d_RANDOM_DEBUBG[i],d_LOCAL_SEARCH_LIST_MGPU[i],s_s_flag);
                 /*------------------------ SOBRE ANT_SOLUTION_CONSTRUCT--------------------*/            
                 //aumentar el numero de thread ahora parece mejorar el rendimiento
                 //en el alg anterior no ocurria eso, cuidado con la memoria compartida
                 //por ahora con 4 threads y 4 bloques es lo optimo
                 /*------------------------ SOBRE ANT_COST_CALCULATION_LS --------------------*/
                 // aumentar el numero de threads mejora el rendimiento  hasta 32 thread
-                ANT_COST_CALCULATION_LS<<<M/32,32>>>(d_NEW_LIST[i],d_COST_MGPU[i],d_NODE_COORDINATE_MGPU[i],d_ROUTE_AUX[i],d_state[i]);
+                //ANT_COST_CALCULATION_LS<<<M/32,32>>>(d_NEW_LIST[i],d_COST_MGPU[i],d_NODE_COORDINATE_MGPU[i],d_ROUTE_AUX[i],d_state[i]);
+                ANT_COST_CALCULATION_FACO<<<M/32,32>>>(d_NEW_LIST[i],d_COST_MGPU[i],d_NODE_COORDINATE_MGPU[i],d_ROUTE_AUX[i],d_POS_IN_ROUTE_MGPU[i],
+				d_LOCAL_SEARCH_LIST_MGPU[i],d_NN_LIST_CL_MGPU[i],d_state[i]);
                 gpuErrchk(cudaMemcpyAsync(GLOBAL_COST+i*M,d_COST_MGPU[i],M*sizeof(int),cudaMemcpyDeviceToHost));   //esto ahorra 6 ms en 4000 nodos 
                 gpuErrchk(cudaMemcpyAsync(NEW_LIST_GLOBAL+i*M*(N+1),d_NEW_LIST[i],(N+1)*M*sizeof(int),cudaMemcpyDeviceToHost));
                 gpuErrchk(cudaMemcpyAsync(NEW_LIST_INDX_GLOBAL+i*M*(N+1),d_NEW_LIST_INDX[i],(N+1)*M*sizeof(int),cudaMemcpyDeviceToHost));   //esto ahorra 6 ms en 4000 nodos 
@@ -294,7 +297,7 @@ int main(){
             cudaFree(d_NEW_LIST[i]);
             cudaFree(d_NEW_LIST_INDX[i]);
             cudaFree(d_POS_IN_ROUTE_MGPU[i]);
-            //cudaFree(d_LOCAL_SEARCH_LIST_MGPU[i]);
+            cudaFree(d_LOCAL_SEARCH_LIST_MGPU[i]);
             cudaFree(d_NN_LIST_CL_MGPU[i]);
    	    cudaFree(d_RANDOM_DEBUBG[i]);
 	    cudaFree(d_POS_IN_ROUTE_OP[i]);

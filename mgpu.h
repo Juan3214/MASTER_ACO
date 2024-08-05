@@ -19,19 +19,19 @@
 #include <thrust/fill.h>
 #define N_GPU 1 
 #define i_GPU 2 
-#define N_e 20 
+#define N_e 1 
 #define M 128//a partir de 512 si duplico 
 #define n_new_edge 8
 #define Q 1 // 
 #define n_best 10
-#define N 100 
-#define ITERACION 5000 
+#define N 51 
+#define ITERACION 100 
 #define LS_ITERATION 0 
-#define c_l 99 
-#define cl 99
-#define s_s_flag 0 
+#define c_l 32 
+#define cl 32
+#define s_s_flag 1 
 #define ACO_ALG 1 // 0 RBAS 1 MMAS 2 AS
-#define problem "kroA100" //solo hay que cambiar este
+#define problem "eil51" //solo hay que cambiar este
 #define name_e "problems/"
 #define alg_name "MMAS_Eq"
 #define name_test_1 "iteration_time/iteration_time_"
@@ -127,7 +127,7 @@ __global__ void RESET_VISITED_LIST(bool *VISITED_LIST);
 __global__ void EVAPORATION(float *PHEROMONE_MATRIX,float e);
 __global__ void ANT_SOLUTION_CONSTRUCT(float *HEURISTIC_PHEROMONE,float *NODE_COORDINATE_2D,int di,
 int *POS_IN_ROUTE,int *ROUTE_OP,int *POS_IN_ROUTE_ANT,
-int max_new_edges,curandState *state,int *NN_LIST,int *NEW_LIST,int *NEW_LIST_INDX,int *RANDOM_DEBUG,int flag_source_solution);
+int max_new_edges,curandState *state,int *NN_LIST,int *NEW_LIST,int *NEW_LIST_INDX,int *RANDOM_DEBUG,int *LS_CHECKLIST,int flag_source_solution);
 __global__ void ANT_COST_CALCULATION_LS(int *ROUTE,int *COST,float *NODE_COORDINATE_2D,int *ROUTE_AUX,curandState *state);
 __global__ void PHEROMONE_UPDATE(int *ROUTE,int *BEST_ANT,float *PHEROMONE_MATRIX,int *NN_LIST,int *COST,int *OPTIMAL_ROUTE,int BEST_GLOBAL_SOLUTION);
 __global__ void iniciar_kernel(curandState *state,int di,unsigned long long seed=1000);
@@ -139,4 +139,9 @@ __device__ float EUC_2D_f(float *d_d,int p1,int p2);
 __device__ void CHECK_VISITED(int *NEW_LIST,int *NEW_LIST_INDX,int ant,int CHOSEN_NODE);
 __device__ bool IS_VISITED(int *NEW_LIST,int *NEW_LIST_INDX,int ant,int j);
 __device__ int GET_CANDIDATE(int *NEW_LIST,int *NEW_LIST_INDX,int ant,int j);
+__device__ void OPT_2_FACO(int *ROUTE, int *POS_IN_ROUTE_ANT, int *COST, int *LS_CHECKLIST, int *NN_LIST,float *NODE_COORDINATE_2D,int ANT);
+__device__ void make_swap_move_route(int current_change_x1,int current_change_x2,int *ROUTE,int *POS_IN_ROUTE,
+		int ROUTE_OFFSET,int POS_IN_R_OFFSET);
+__global__ void ANT_COST_CALCULATION_FACO(int *ROUTE,int *COST,float *NODE_COORDINATE_2D,int *ROUTE_AUX,int *POS_IN_ROUTE,int *LS_CHECKLIST
+		,int *NN_LIST,curandState *state);
 #endif
