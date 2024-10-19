@@ -19,19 +19,19 @@
 #include <thrust/fill.h>
 #define N_GPU 1 
 #define i_GPU 2 
-#define N_e 1 
-#define M 128//a partir de 512 si duplico 
+#define N_e 20 
+#define M 256//a partir de 512 si duplico 
 #define n_new_edge 8
 #define Q 1 // 
 #define n_best 10
-#define N 51 
-#define ITERACION 100 
+#define N 442 
+#define ITERACION 500000
 #define LS_ITERATION 0 
 #define c_l 32 
 #define cl 32
-#define s_s_flag 1 
+#define s_s_flag 0
 #define ACO_ALG 1 // 0 RBAS 1 MMAS 2 AS
-#define problem "eil51" //solo hay que cambiar este
+#define problem "pcb442" //solo hay que cambiar este
 #define name_e "problems/"
 #define alg_name "MMAS_Eq"
 #define name_test_1 "iteration_time/iteration_time_"
@@ -84,6 +84,7 @@ bool IS_VISITED_CPU(int *NEW_LIST,int *NEW_LIST_INDX,int ant,int j);
 int GET_CANDIDATE_CPU(int *NEW_LIST,int *NEW_LIST_INDX,int ant,int j);
 int rutainicial(int *rute_op,float *d,int *NEW_LIST_GLOBAL,int *NEW_LIST_INDX_GLOBAL,int *NN_LIST,int *POS_IN_ROUTE,int seed);
 void UPGRADE_PHEROMONE(int *ROUTE,int *BEST_ANT,float *PHEROMONE_MATRIX,int *NN_LIST,int *COST,int *OPTIMAL_ROUTE,int BEST_GLOBAL_SOLUTION,float tau_max,float tau_min,float e,int ACO_flag);
+void OPT_2_nn(int *ROUTE, int *POS_IN_ROUTE_ANT, int *COST,int *NN_LIST,float *NODE_COORDINATE_2D,int ANT);
 /*
 *This function free the memory for the given vectores
 */

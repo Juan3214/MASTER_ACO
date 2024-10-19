@@ -40,7 +40,7 @@ int main(){
     // ACO Parameters
     float alpha=1;
     float beta=2;
-    float e=0.02;
+    float e=0.5;
     // STAD VECTORS 
     int *vec_solution;vec_solution= (int* )malloc(N_e*sizeof(int));
     int *vec_iter;vec_iter= (int* )malloc(N_e*sizeof(int)); //vectores para estadistica
@@ -126,7 +126,7 @@ int main(){
             cudaMalloc( (void **) &d_NEW_LIST_INDX[i], M*(N+1)*sizeof( int ) );
     	    cudaMalloc( (void **) &d_RANDOM_DEBUBG[i], M*N*sizeof(int) );//1
             cudaMalloc( (void **) &d_COST_MGPU[i], M*sizeof( int ) );//6
-            cudaMalloc( (void **) &d_LOCAL_SEARCH_LIST_MGPU[i], M*N*sizeof( int ) );
+            cudaMalloc( (void **) &d_LOCAL_SEARCH_LIST_MGPU[i], M*(N+1)*sizeof( int ) );
             cudaMalloc( (void **) &d_NN_LIST_CL_MGPU[i], cl*N*sizeof( int ) ); //7
             cudaMemcpy(d_NN_LIST_CL_MGPU[i],NN_LIST_cl,(c_l*N)*sizeof(int),cudaMemcpyHostToDevice);
             cudaMalloc( (void **) &d_HEURISTIC_PHEROMONE_MGPU[i], N*cl*sizeof( float ) );//10
@@ -137,7 +137,10 @@ int main(){
         cudaSetDevice(i_GPU);
         printf("\n greedy \n");
         int BEST_GLOBAL_SOLUTION=rutainicial(OPTIMAL_ROUTE,NODE_COORDINATE_2D,NEW_LIST_GLOBAL,
-			NEW_LIST_INDX_GLOBAL,NN_LIST_cl,POS_IN_ROUTE_OP,x);
+			NEW_LIST_INDX_GLOBAL,NN_LIST_cl,POS_IN_ROUTE_OP,1000);
+	printf("solucion inicial %d ",BEST_GLOBAL_SOLUTION);
+        OPT_2_nn(OPTIMAL_ROUTE, POS_IN_ROUTE_OP, &BEST_GLOBAL_SOLUTION,NN_LIST_cl,NODE_COORDINATE_2D,0);
+	printf("solucion inicial %d ",BEST_GLOBAL_SOLUTION);
 	cudaMemcpy(d_OPTIMAL_ROUTE,OPTIMAL_ROUTE, (N+1)*sizeof(int),cudaMemcpyHostToDevice);
 	float ini_pheromone;
         float p=pow(P_best,1/(float)N);
@@ -214,6 +217,7 @@ int main(){
 	    double end_1 =omp_get_wtime();
             //cudaMemcpy(HORMIGAS_COSTO+it*N_GPU*M,GLOBAL_COST,N_GPU*M*sizeof(int),cudaMemcpyHostToHost);
             if(it==0)vec_warm_up_time[x]=(end_1-begin_1)*1000;
+	    //printf("time it %lf \n",(end_1-begin_1)*1000);
             vec_ant_iteration_time_series[it]+=((end_1-begin_1)*1000.0)/((float)N_e);
             /*
             for(i = 0; i < 4; i++)
@@ -276,8 +280,9 @@ int main(){
                 cudaMemcpy(d_HEURISTIC_PHEROMONE_MGPU[i],HEURISTIC_PHEROMONE,(N*c_l)*sizeof(float),cudaMemcpyHostToDevice);
             }
             cudaDeviceSynchronize();
-            float end_2 =omp_get_wtime(); 
+            double end_2 =omp_get_wtime(); 
             prom_time+=(end_2-begin_1)*1000;
+	    //printf("time end %lf \n",(end_2-begin_1)*1000);
         }
 	guardar_entropia_promedio(ENTROPY_VECTOR_mean,ENTROPY_VECTOR_mean_h,x,alpha,beta);
         vec_solution[x]=BEST_GLOBAL_SOLUTION;
