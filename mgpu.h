@@ -17,33 +17,33 @@
 #include <thrust/device_ptr.h>
 #include <thrust/sort.h>
 #include <thrust/fill.h>
-#define N_GPU 1 
+#define N_GPU 2 
 #define i_GPU 2 
-#define N_e 20 
+#define N_e 15
 #define M 256//a partir de 512 si duplico 
 #define n_new_edge 8
 #define Q 1 // 
 #define n_best 10
-#define N 442 
-#define ITERACION 500000
+#define ITERACION 50000
 #define LS_ITERATION 0 
 #define c_l 32 
 #define cl 32
 #define s_s_flag 0
-#define ACO_ALG 1 // 0 RBAS 1 MMAS 2 AS
-#define problem "pcb442" //solo hay que cambiar este
+#define ACO_ALG  1// 0 RBAS 1 MMAS 2 AS
+#define problem "kroA200" //solo hay que cambiar este
+#define N 200
 #define name_e "problems/"
-#define alg_name "MMAS_Eq"
+#define alg_name "MMAS"
 #define name_test_1 "iteration_time/iteration_time_"
 #define name_test_2 "iteration_time_series/interation_time_"
 #define name_test_3 "warm_up_time/warm_up_time_"
-#define name_test_4 "soluciones/soluciones_"
+#define name_test_4 "soluciones/soluciones_F"
 #define name_test_5 "hormigas/recorridos_"
 #define name_test_6 "hormigas/metricas_"
 #define name_test_7 "matrices/data/ENTROPY_"
 #define name_test_8 "matrices/data/ENTROPY_PHERO_"
-#define name_test_9 "matrices/data/LAST_IMPROVE/LAST_IMPROVE_"
-#define name_test_10 "matrices/data/ENTROPY_MEAN/ENTROPY_MEAN_"
+#define name_test_9 "matrices/data/LAST_IMPROVE_TEST/LAST_IMPROVE"
+#define name_test_10 "matrices/data/ENTROPY_MEAN_TEST/ENTROPY_MEAN"
 #define solucion 426 //eil51
 //mona-lisa100K
 //#define solucion 7542.0 //berlin52

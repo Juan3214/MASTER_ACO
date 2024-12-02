@@ -39,8 +39,8 @@ int main(){
     cudaMemcpy(d_NN_LIST_cl,NN_LIST_cl,N*cl*sizeof(int),cudaMemcpyHostToDevice);
     // ACO Parameters
     float alpha=1;
-    float beta=2;
-    float e=0.5;
+    float beta=5;
+    float e=0.01;
     // STAD VECTORS 
     int *vec_solution;vec_solution= (int* )malloc(N_e*sizeof(int));
     int *vec_iter;vec_iter= (int* )malloc(N_e*sizeof(int)); //vectores para estadistica
@@ -139,7 +139,7 @@ int main(){
         int BEST_GLOBAL_SOLUTION=rutainicial(OPTIMAL_ROUTE,NODE_COORDINATE_2D,NEW_LIST_GLOBAL,
 			NEW_LIST_INDX_GLOBAL,NN_LIST_cl,POS_IN_ROUTE_OP,1000);
 	printf("solucion inicial %d ",BEST_GLOBAL_SOLUTION);
-        OPT_2_nn(OPTIMAL_ROUTE, POS_IN_ROUTE_OP, &BEST_GLOBAL_SOLUTION,NN_LIST_cl,NODE_COORDINATE_2D,0);
+        //OPT_2_nn(OPTIMAL_ROUTE, POS_IN_ROUTE_OP, &BEST_GLOBAL_SOLUTION,NN_LIST_cl,NODE_COORDINATE_2D,0);
 	printf("solucion inicial %d ",BEST_GLOBAL_SOLUTION);
 	cudaMemcpy(d_OPTIMAL_ROUTE,OPTIMAL_ROUTE, (N+1)*sizeof(int),cudaMemcpyHostToDevice);
 	float ini_pheromone;
@@ -237,6 +237,7 @@ int main(){
             cudaSetDevice(i_GPU);
             if (it==0){
                 GLOBAL_COST[0]=BEST_GLOBAL_SOLUTION;
+		printf("%d best best\n",BEST_GLOBAL_SOLUTION);
                 tau_max=(float)e*((float)1/(float)BEST_GLOBAL_SOLUTION);
                 tau_min=tau_max*((1-p)/((avg-1)*p));
             }
