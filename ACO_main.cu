@@ -217,7 +217,7 @@ int main(){
 	    double end_1 =omp_get_wtime();
             //cudaMemcpy(HORMIGAS_COSTO+it*N_GPU*M,GLOBAL_COST,N_GPU*M*sizeof(int),cudaMemcpyHostToHost);
             if(it==0)vec_warm_up_time[x]=(end_1-begin_1)*1000;
-	    //printf("time it %lf \n",(end_1-begin_1)*1000);
+	    printf("time it %lf \n",(end_1-begin_1)*1000);
             vec_ant_iteration_time_series[it]+=((end_1-begin_1)*1000.0)/((float)N_e);
             /*
             for(i = 0; i < 4; i++)
