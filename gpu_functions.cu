@@ -20,7 +20,6 @@ __global__ void GPU_shannon_entropy_p_r(float *PHEROMONE_MATRIX,int *ROUTE,int *
 __global__ void iniciar_kernel(curandState *state,int di,unsigned long long seed){
     int i=threadIdx.x+ (blockIdx.x * blockDim.x);
     if (seed==1000){
-	printf("\n hola \n");
     	curand_init((unsigned long long)clock() + (unsigned long long)(i+M*di), 0, 0, &state[i]);
     }
     else{
@@ -43,9 +42,10 @@ int max_new_edges,curandState *state,int *NN_LIST,int *NEW_LIST,int *NEW_LIST_IN
 	RANDOM_DEBUG[i*N]=random;
         CHECK_VISITED(NEW_LIST,NEW_LIST_INDX,i,random);
 	POS_IN_ROUTE_ANT[i*N+random]=N-1;
+	
         int pos;  
 
-        __shared__ float prob[(c_l)*4];
+        __shared__ float prob[(cl)*4];
         while(j<N-1){
             loc_act=NEW_LIST[i*(N+1)+NEW_LIST[i*(N+1)+N]]; // ACTUAL LOCATION
              // CHECK AS VISITED
@@ -53,6 +53,7 @@ int max_new_edges,curandState *state,int *NN_LIST,int *NEW_LIST,int *NEW_LIST_IN
             for (int k=1;k<cl;k++){
                     pos=NN_LIST[loc_act*cl+k];
                     prob[id*cl+k]=prob[id*cl+k-1]+HEURISTIC_PHEROMONE[loc_act*cl+k]*(float)(1-(int)(IS_VISITED(NEW_LIST,NEW_LIST_INDX,i,pos)));
+		    //printf("prob %.16f",HEURISTIC_PHEROMONE[loc_act*cl+k]);
             }
             float val =  curand_uniform(&localstate);
             float ranval=val*prob[id*cl+cl-1];
@@ -242,8 +243,8 @@ int BEST_GLOBAL_SOLUTION,int update_flag){
             	}
 
             }
-	    	
 	}
+
     }
 }
 __global__ void PHEROMONE_CHECK_MMAS(float *PHEROMONE_MATRIX,float tau_max,float tau_min){
@@ -474,7 +475,7 @@ void UPGRADE_PHEROMONE(int *ROUTE,int *BEST_ANT,float *PHEROMONE_MATRIX,int *NN_
 	EVAPORATION<<<((N*cl+32-(N*cl%32)))/32,32>>>(PHEROMONE_MATRIX,e);
 	if (ACO_flag == 0){
 	    // RBAS
-            PHEROMONE_UPDATE<<<((N+32-(N%32)))/32,32>>>(ROUTE,BEST_ANT,PHEROMONE_MATRIX,NN_LIST,COST,OPTIMAL_ROUTE,BEST_GLOBAL_SOLUTION); 
+            PHEROMONE_UPDATE<<<((N+16-(N%16)))/16,16>>>(ROUTE,BEST_ANT,PHEROMONE_MATRIX,NN_LIST,COST,OPTIMAL_ROUTE,BEST_GLOBAL_SOLUTION); 
 	}
 	else if (ACO_flag == 1){	
             // MMAS
@@ -483,13 +484,13 @@ void UPGRADE_PHEROMONE(int *ROUTE,int *BEST_ANT,float *PHEROMONE_MATRIX,int *NN_
             int MMAS_flag = (randu<0.1) ? 1 : 0 ;
 	    PHEROMONE_CHECK_MMAS<<<((N*cl+32-(N*cl%32)))/32,32>>>(PHEROMONE_MATRIX, tau_max, tau_min);
             
-	    PHEROMONE_UPDATE_MMAS<<<((N+32-(N%32)))/32,32>>>(ROUTE,BEST_ANT,PHEROMONE_MATRIX,NN_LIST,COST,OPTIMAL_ROUTE,BEST_GLOBAL_SOLUTION,MMAS_flag); 
+	    PHEROMONE_UPDATE_MMAS<<<((N+16-(N%16)))/16,16>>>(ROUTE,BEST_ANT,PHEROMONE_MATRIX,NN_LIST,COST,OPTIMAL_ROUTE,BEST_GLOBAL_SOLUTION,MMAS_flag); 
 
 	    PHEROMONE_CHECK_MMAS<<<((N*cl+32-(N*cl%32)))/32,32>>>(PHEROMONE_MATRIX, tau_max, tau_min);
 	}
 	else if (ACO_flag == 2){
 	    // AS
-	    PHEROMONE_UPDATE_AS<<<((N+32-(N%32)))/32,32>>>(ROUTE,BEST_ANT,PHEROMONE_MATRIX,NN_LIST,COST,OPTIMAL_ROUTE,BEST_GLOBAL_SOLUTION); 
+	    PHEROMONE_UPDATE_AS<<<((N+16-(N%16)))/16,16>>>(ROUTE,BEST_ANT,PHEROMONE_MATRIX,NN_LIST,COST,OPTIMAL_ROUTE,BEST_GLOBAL_SOLUTION); 
 
 	}
 	else{

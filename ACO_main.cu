@@ -64,7 +64,7 @@ int main(){
         int *d_RANDOM_DEBUBG[N_GPU];
 	int *d_LOCAL_SEARCH_LIST_MGPU[N_GPU];
 	float tau_min,tau_max;
-        float P_best=0.001,avg=(float)N/2.0;
+        float P_best=0.001,avg=(float)cl/2.0;
         int *d_COST_MGPU[N_GPU];int *d_NN_LIST_CL_MGPU[N_GPU]; //4
         float *d_NODE_COORDINATE_MGPU[N_GPU];  // 5
         int *d_OPTIMAL_ROUTE_MGPU[N_GPU];
@@ -137,7 +137,7 @@ int main(){
         cudaSetDevice(i_GPU);
         printf("\n greedy \n");
         int BEST_GLOBAL_SOLUTION=rutainicial(OPTIMAL_ROUTE,NODE_COORDINATE_2D,NEW_LIST_GLOBAL,
-			NEW_LIST_INDX_GLOBAL,NN_LIST_cl,POS_IN_ROUTE_OP,1000);
+			NEW_LIST_INDX_GLOBAL,NN_LIST_cl,POS_IN_ROUTE_OP,x);
 	printf("solucion inicial %d ",BEST_GLOBAL_SOLUTION);
         //OPT_2_nn(OPTIMAL_ROUTE, POS_IN_ROUTE_OP, &BEST_GLOBAL_SOLUTION,NN_LIST_cl,NODE_COORDINATE_2D,0);
 	printf("solucion inicial %d ",BEST_GLOBAL_SOLUTION);
@@ -154,7 +154,7 @@ int main(){
 	}
 		
         printf("\n fijando feromona %f \n",(float)1/ini_pheromone);
-        fijar_pheromone<<<(N*cl+32-(N*cl%32)),32>>>(d_PHEROMONE_MATRIX,(float)1/ini_pheromone);
+        fijar_pheromone<<<(N*cl+32-(N*cl%32))/32,32>>>(d_PHEROMONE_MATRIX,(float)1/ini_pheromone);
 	if ( 1 == ACO_ALG)PHEROMONE_CHECK_MMAS<<<((N*cl+32-(N*cl%32)))/32,32>>>(d_PHEROMONE_MATRIX, tau_max, tau_min);;
         cudaMemcpy(HEURISTIC_PHEROMONE,d_PHEROMONE_MATRIX,(c_l*N)*sizeof(float),cudaMemcpyDeviceToHost);
         HEURISTIC_PHEROMONE_CALCULATION<<<N,cl>>>(d_NODE_COORDINATE_2D,d_PHEROMONE_MATRIX,
@@ -200,7 +200,7 @@ int main(){
                 /*------------------------ SOBRE ANT_COST_CALCULATION_LS --------------------*/
                 // aumentar el numero de threads mejora el rendimiento  hasta 32 thread
                 //ANT_COST_CALCULATION_LS<<<M/32,32>>>(d_NEW_LIST[i],d_COST_MGPU[i],d_NODE_COORDINATE_MGPU[i],d_ROUTE_AUX[i],d_state[i]);
-                ANT_COST_CALCULATION_FACO<<<M/32,32>>>(d_NEW_LIST[i],d_COST_MGPU[i],d_NODE_COORDINATE_MGPU[i],d_ROUTE_AUX[i],d_POS_IN_ROUTE_MGPU[i],
+                ANT_COST_CALCULATION_FACO<<<M/4,4>>>(d_NEW_LIST[i],d_COST_MGPU[i],d_NODE_COORDINATE_MGPU[i],d_ROUTE_AUX[i],d_POS_IN_ROUTE_MGPU[i],
 				d_LOCAL_SEARCH_LIST_MGPU[i],d_NN_LIST_CL_MGPU[i],d_state[i]);
                 gpuErrchk(cudaMemcpyAsync(GLOBAL_COST+i*M,d_COST_MGPU[i],M*sizeof(int),cudaMemcpyDeviceToHost));   //esto ahorra 6 ms en 4000 nodos 
                 gpuErrchk(cudaMemcpyAsync(NEW_LIST_GLOBAL+i*M*(N+1),d_NEW_LIST[i],(N+1)*M*sizeof(int),cudaMemcpyDeviceToHost));
@@ -217,7 +217,7 @@ int main(){
 	    double end_1 =omp_get_wtime();
             //cudaMemcpy(HORMIGAS_COSTO+it*N_GPU*M,GLOBAL_COST,N_GPU*M*sizeof(int),cudaMemcpyHostToHost);
             if(it==0)vec_warm_up_time[x]=(end_1-begin_1)*1000;
-	    printf("time it %lf \n",(end_1-begin_1)*1000);
+	//    printf("time it %lf \n",(end_1-begin_1)*1000);
             vec_ant_iteration_time_series[it]+=((end_1-begin_1)*1000.0)/((float)N_e);
             /*
             for(i = 0; i < 4; i++)
