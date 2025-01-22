@@ -18,22 +18,22 @@
 #include <thrust/sort.h>
 #include <thrust/fill.h>
 #define N_GPU 1 
-#define i_GPU 3
+#define i_GPU 0 
 #define N_e 15
-#define M 512//a partir de 512 si duplico 
+#define M 512
 #define n_new_edge 8
-#define Q 1 // 
+#define Q 1  
 #define n_best 6
 #define ITERACION 50000
 #define LS_ITERATION 0 
 #define c_l 32 
 #define cl 32
 #define s_s_flag 1
-#define ACO_ALG  1// 0 RBAS 1 MMAS 2 AS
-#define problem "d15112" //solo hay que cambiar este
-#define N 15112
+#define ACO_ALG  0// 0 RBAS 1 MMAS 2 AS
+#define problem "d18512"
+#define N 18512
 #define name_e "problems/"
-#define alg_name "MMAS_ss"
+#define alg_name "RBAS_ssaaaa"
 #define name_test_1 "iteration_time/iteration_time_"
 #define name_test_2 "iteration_time_series/interation_time_"
 #define name_test_3 "warm_up_time/warm_up_time_"
@@ -46,17 +46,6 @@
 #define name_test_10 "matrices/data/ENTROPY_MEAN_TEST_ss/ENTROPY_MEAN"
 #define solucion 426 //eil51
 //mona-lisa100K
-//#define solucion 7542.0 //berlin52
-//#define solucion 675.0 //st70
-//#define solucion 538.0 //eil76
-//#define solucion 1211.0 //rat99
-//#define solucion 21282.0 //kroA100
-//#define solucion 629.0 //eil101
-//#define solucion 6942.0 //gr120
-//#define solucion 6528.0 //ch150
-//#define solucion 29368.0 //kroA200
-//#define solucion 50778.0 //pcb442
-//#define solucion 2763.0 //pa561
 // fnl4461
 void escribir_costo(int *HORMIGAS_COSTOS,int x);
 void SAVE_LAST_IMRPOVED(int LAST_IMRPOVE_IT,int BEST_SOLUTION,int experiment,float alpha,float beta);
@@ -85,13 +74,6 @@ int GET_CANDIDATE_CPU(int *NEW_LIST,int *NEW_LIST_INDX,int ant,int j);
 int rutainicial(int *rute_op,float *d,int *NEW_LIST_GLOBAL,int *NEW_LIST_INDX_GLOBAL,int *NN_LIST,int *POS_IN_ROUTE,int seed);
 void UPGRADE_PHEROMONE(int *ROUTE,int *BEST_ANT,float *PHEROMONE_MATRIX,int *NN_LIST,int *COST,int *OPTIMAL_ROUTE,int BEST_GLOBAL_SOLUTION,float tau_max,float tau_min,float e,int ACO_flag);
 void OPT_2_nn(int *ROUTE, int *POS_IN_ROUTE_ANT, int *COST,int *NN_LIST,float *NODE_COORDINATE_2D,int ANT);
-/*
-*This function free the memory for the given vectores
-*/
-
-/*
-* This function join the 4 gpu cost vectors
-*/
 __global__ void GPU_shannon_entropy_p_r(float *PHEROMONE_MATRIX,int *ROUTE,int *NN_LIST,float *PROB_ROUTE,float last_entropy);
 void make_candidate_list(int *d_NN_LIST_aux,int *d_DISTANCE_NODE,int *DISTANCE_NODE,float *NODE_COORDINATE_2D,int *NN_LIST_cl);
 __global__ void LIST_INIT(int *NEW_LIST,int *d_NEW_LIST_INDX);
@@ -100,29 +82,8 @@ __global__ void PHEROMONE_UPDATE_MMAS(int *ROUTE,int *BEST_ANT,
 float *PHEROMONE_MATRIX,int *NN_LIST,int *COST,int *OPTIMAL_ROUTE,
 int BEST_GLOBAL_SOLUTION,int update_flag);
 __global__ void PHEROMONE_CHECK_MMAS(float *PHEROMONE_MATRIX,float tau_max,float tau_mim);
-/*
-* This function calculate the combinated factor of pheromone and visibility
-*/
-/*
-* This function reset the rutes to 0
-*/
 __global__ void RESET_ROUTE(int *ROUTE);
-/*
-* This function join the 4 gpu rute vectors
-*/
-/*
-* This function set the pheromone to a value 
-*/
 __global__ void fijar_pheromone(float *d_pheromone,float ini_pheromone);
-/*
-* This function set the visibility to a value 
-*/
-/*
-* This function set the cost to a value 
-*/
-/*
-* This function reset the visited_list of the ant tour
-*/
 __global__ void HEURISTIC_PHEROMONE_CALCULATION(float *NODE_COORDINATE,float *PHEROMONE_MATRIX,float *HEURISTIC_PHEROMONE,int *NN_LIST,float alpha,float beta);
 __global__ void RESET_VISITED_LIST(bool *VISITED_LIST);
 __global__ void EVAPORATION(float *PHEROMONE_MATRIX,float e);

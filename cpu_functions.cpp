@@ -35,7 +35,6 @@ float shannon_entropy_p_r(float *PHEROMONE_MATRIX,int *ROUTE,int *NN_LIST,float 
 int rutainicial_2(int *rute_op,float *d,bool *lista_vis){
     rute_op[0]= rand()%(N);
     
-    printf("\n el random es %d \n",rute_op[0]);
     int cost=0;
     for (int i=0;i<N-1;i++){
         lista_vis[rute_op[i]]=true;
@@ -60,7 +59,6 @@ int rutainicial_2(int *rute_op,float *d,bool *lista_vis){
     printf("\n");
     rute_op[N]=rute_op[0];
     for (int i=0;i<N+1;i++)printf("%d ",rute_op[i%N]);
-    printf("\n el coste incial es %d \n",cost);
     return cost;
 }
 void lectura_2(float *dis){
@@ -296,7 +294,6 @@ int rutainicial(int *rute_op,float *d,int *NEW_LIST_GLOBAL,int *NEW_LIST_INDX_GL
     current_node=initial_node;
     for (i=0;i<N-1;i++){
 	next_node=N;
-	if (i%1000==0)printf("\n voy en el nodo %d \n",i); 	
 	for (j=0;j<cl;j++){
 		candidate=NN_LIST[current_node*cl+j];
 		if (!IS_VISITED_CPU(NEW_LIST_GLOBAL,NEW_LIST_INDX_GLOBAL,0,candidate)){
@@ -326,7 +323,6 @@ int rutainicial(int *rute_op,float *d,int *NEW_LIST_GLOBAL,int *NEW_LIST_INDX_GL
 	    rute_op[i]=NEW_LIST_GLOBAL[i%N];
 	    POS_IN_ROUTE[rute_op[i]]=i;
     }
-    printf("\n el coste incial es %d \n",cost);
     for (i=0;i<N;i++)printf("%d ",rute_op[i]);
     return cost;
 }
@@ -374,126 +370,6 @@ float promediar(float *vec){
         sumaprom+=vec[i];
     }
     return sumaprom/N_e;
-}
-float opt33(int *rute_op,int *rute_op_aux,float *d,float global_sol){
-    
-    int pos[3]={};
-    for (int i=0;i<3;i++){
-        int aux =0;
-        while (aux==0){
-            aux=1;
-            int random = (int) rand()%(N-2)+1;
-            for (int j=0;j<3;j++){
-                if (random==pos[j]){
-                    aux=0;
-                }
-            }
-            if (aux==1){
-                pos[i]=random;
-            }
-        }
-    }
-    int temp;
-    if (pos[0]>pos[1]){
-        temp=pos[1];
-        pos[1]=pos[0];
-        pos[0]=temp;
-    } 
-    if (pos[0]>pos[2]){
-        temp=pos[2];
-        pos[2]=pos[0];
-        pos[0]=temp;
-    }
-    if (pos[1]>pos[2]){
-        temp=pos[2];
-        pos[2]=pos[1];
-        pos[1]=temp;
-    }  
-    //printf("\n array \n %d %d %d",pos[0],pos[1],pos[2]);
-    int delta0=pos[1]-pos[0];int delta1=pos[2]-pos[1];int aux=0;
-    
-    float d0,d1,d2,d3,d4,d5,d6,d7,change1,change2,change3,change4,change5,change6,change7;
-    d0=d[rute_op[pos[0]-1]*N+rute_op[pos[0]]]   +      d[rute_op[pos[1]-1]*N+rute_op[pos[1]]]   +    d[rute_op[pos[2]-1]*N+rute_op[pos[2]]];
-    d1=d[rute_op[pos[0]-1]*N+rute_op[pos[1]-1]]   +      d[rute_op[pos[0]]*N+rute_op[pos[1]]]   +    d[rute_op[pos[2]-1]*N+rute_op[pos[2]]];change1=d1-d0;
-    d2=d[rute_op[pos[2]-1]*N+rute_op[pos[0]-1]]   +      d[rute_op[pos[1]-1]*N+rute_op[pos[1]]]   +    d[rute_op[pos[2]]*N+rute_op[pos[0]]];change2=d2-d0;
-    d3=d[rute_op[pos[0]-1]*N+rute_op[pos[0]]]   +      d[rute_op[pos[1]-1]*N+rute_op[pos[2]-1]]   +    d[rute_op[pos[1]]*N+rute_op[pos[2]]];change3=d3-d0;
-    d4=d[rute_op[pos[0]-1]*N+rute_op[pos[1]]]   +      d[rute_op[pos[2]-1]*N+rute_op[pos[1]-1]]   +    d[rute_op[pos[0]]*N+rute_op[pos[2]]];change4=d4-d0;
-    d5=d[rute_op[pos[0]-1]*N+rute_op[pos[1]-1]]   +      d[rute_op[pos[0]]*N+rute_op[pos[2]-1]]   +    d[rute_op[pos[1]]*N+rute_op[pos[2]]];change5=d5-d0;
-    d6=d[rute_op[pos[2]-1]*N+rute_op[pos[0]-1]]   +      d[rute_op[pos[2]]*N+rute_op[pos[1]-1]]   +    d[rute_op[pos[0]]*N+rute_op[pos[1]]];change6=d6-d0;
-    d7=d[rute_op[pos[1]]*N+rute_op[pos[0]-1]]   +      d[rute_op[pos[2]-1]*N+rute_op[pos[0]]]   +    d[rute_op[pos[1]-1]*N+rute_op[pos[2]]];change7=d7-d0;
-    if (d0>d1){d0=d1;aux=1;}if (d0>d2){d0=d2;aux=2;}if (d0>d3){d0=d3;aux=3;}
-    if (d0>d4){d0=d4;aux=4;}if (d0>d5){d0=d5;aux=5;}if (d0>d6){d0=d6;aux=6;}
-    if (d0>d7){d0=d7;aux=7;}
-    if (aux==1){
-    for (int i=0;i<pos[0];i++)rute_op_aux[i]=rute_op[i]; 
-    for (int i=0;i<delta0;i++)rute_op_aux[i+pos[0]]=rute_op[pos[1]-i-1];
-    for (int i=0;i<delta1;i++)rute_op_aux[i+pos[0]+delta0]=rute_op[pos[1]+i];
-    for (int i=pos[2];i<N+1;i++)rute_op_aux[i]=rute_op[i];
-    //printf(" caso 1 a' b c\n");for (int i=0;i<N+1;i++)printf("%d ",rute_op_aux[i]+1);
-    for (int i=0;i<N+1;i++)rute_op[i]=rute_op_aux[i];printf(" \n%f \n",global_sol+change1);
-    return global_sol+change1;
-    }if (aux==2){
-    for (int i=0;i<N;i++)rute_op_aux[i]=1;
-    for (int i=0;i<pos[0];i++)rute_op_aux[i]=rute_op[i]; 
-    for (int i=0;i<delta1;i++)rute_op_aux[i+pos[0]]=rute_op[pos[2]-i-1];
-    for (int i=0;i<delta0;i++)rute_op_aux[i+delta1+pos[0]]=rute_op[pos[1]-i-1];
-    for (int i=pos[2];i<N+1;i++)rute_op_aux[i]=rute_op[i];
-    //printf("\n caso 2 a b c' \n");for (int i=0;i<N+1;i++)printf("%d ",rute_op_aux[i]+1);
-    for (int i=0;i<N+1;i++)rute_op[i]=rute_op_aux[i];printf(" \n%f \n",global_sol+change2);
-    return global_sol+change2;
-    }if (aux==3){
-    for (int i=0;i<N+1;i++)rute_op_aux[i]=1;
-    for (int i=0;i<pos[0];i++)rute_op_aux[i]=rute_op[i]; 
-    for (int i=0;i<delta0;i++)rute_op_aux[i+pos[0]]=rute_op[pos[0]+i];
-    for (int i=0;i<delta1;i++)rute_op_aux[i+pos[0]+delta0]=rute_op[pos[2]-i-1];
-    for (int i=pos[2];i<N+1;i++)rute_op_aux[i]=rute_op[i];
-    //printf("\n caso 3 a b' c \n");for (int i=0;i<N+1;i++)printf("%d ",rute_op_aux[i]+1);
-    for (int i=0;i<N+1;i++)rute_op[i]=rute_op_aux[i];printf(" \n%f \n",global_sol+change3);
-    return global_sol+change3;
-    }if (aux==4){
-    for (int i=0;i<N+1;i++)rute_op_aux[i]=1;
-    for (int i=0;i<pos[0];i++)rute_op_aux[i]=rute_op[i]; 
-    for (int i=0;i<delta1;i++)rute_op_aux[i+pos[0]]=rute_op[pos[1]+i];
-    for (int i=0;i<delta0;i++)rute_op_aux[i+pos[0]+delta1]=rute_op[pos[1]-i-1];
-    for (int i=pos[2];i<N+1;i++)rute_op_aux[i]=rute_op[i];
-    //printf("\n caso 4 a' c b \n");for (int i=0;i<N+1;i++)printf("%d ",rute_op_aux[i]+1);
-    for (int i=0;i<N+1;i++)rute_op[i]=rute_op_aux[i];printf(" \n%f \n",global_sol+change4);
-    return global_sol+change4;
-    }if (aux==5){
-    for (int i=0;i<N+1;i++)rute_op_aux[i]=1;
-    for (int i=0;i<pos[0];i++)rute_op_aux[i]=rute_op[i]; 
-    for (int i=0;i<delta0;i++)rute_op_aux[i+pos[0]]=rute_op[pos[1]-i-1];
-    for (int i=0;i<delta1;i++)rute_op_aux[i+pos[0]+delta0]=rute_op[pos[2]-i-1];
-    for (int i=pos[2];i<N+1;i++)rute_op_aux[i]=rute_op[i];
-    //printf("\n caso 5 a' b' c \n");for (int i=0;i<N+1;i++)printf("%d ",rute_op_aux[i]+1);
-    for (int i=0;i<N+1;i++)rute_op[i]=rute_op_aux[i];printf(" \n%f \n",global_sol+change5);
-    return global_sol+change5;
-    }if (aux==6){
-    for (int i=0;i<N+1;i++)rute_op_aux[i]=1;
-    for (int i=0;i<pos[0];i++)rute_op_aux[i]=rute_op[i]; 
-    for (int i=0;i<delta1;i++)rute_op_aux[i+pos[0]]=rute_op[pos[2]-i-1];
-    for (int i=0;i<delta0;i++)rute_op_aux[i+pos[0]+delta1]=rute_op[pos[0]+i];
-    for (int i=pos[2];i<N+1;i++)rute_op_aux[i]=rute_op[i];
-    //printf("\n caso 6 a' b c \n");for (int i=0;i<N+1;i++)printf("%d ",rute_op_aux[i]+1);
-    for (int i=0;i<N+1;i++)rute_op[i]=rute_op_aux[i];printf(" \n%f \n",global_sol+change6);
-    return global_sol+change6;
-    }if (aux==7){
-    for (int i=0;i<N+1;i++)rute_op_aux[i]=1;
-    for (int i=0;i<pos[0];i++)rute_op_aux[i]=rute_op[i]; 
-    for (int i=0;i<delta1;i++)rute_op_aux[i+pos[0]]=rute_op[pos[1]+i];
-    for (int i=0;i<delta0;i++)rute_op_aux[i+pos[0]+delta1]=rute_op[pos[0]+i];
-    for (int i=pos[2];i<N+1;i++)rute_op_aux[i]=rute_op[i];
-    //printf("\n caso 7 a c b \n");for (int i=0;i<N+1;i++)printf("%d ",rute_op_aux[i]+1);
-    for (int i=0;i<N+1;i++)rute_op[i]=rute_op_aux[i];printf(" \n%f \n",global_sol+change7);
-    return global_sol+change7;
-    }
-    if (aux==0){
-        //printf("no ha pasao na\n");
-        //printf("d0 %f d1 %f d2 %f d3 %f d4 %f d5 %f d6 %f d7 %f",d0,d1,d2,d3,d4,d5,d6,d7);
-        return global_sol;
-    }
-    //printf("\n");
-    return global_sol;
 }
 void SAVE_PHEROMONE_MATRIX(float *PHEROMONE_MATRIX,int it, int experiment,float alpha,float beta,float e){
     FILE *file1;

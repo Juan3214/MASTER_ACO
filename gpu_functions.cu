@@ -42,10 +42,9 @@ int max_new_edges,curandState *state,int *NN_LIST,int *NEW_LIST,int *NEW_LIST_IN
 	RANDOM_DEBUG[i*N]=random;
         CHECK_VISITED(NEW_LIST,NEW_LIST_INDX,i,random);
 	POS_IN_ROUTE_ANT[i*N+random]=N-1;
-	
         int pos;  
 
-        __shared__ float prob[(cl)*4];
+        __shared__ float prob[(c_l)*4];
         while(j<N-1){
             loc_act=NEW_LIST[i*(N+1)+NEW_LIST[i*(N+1)+N]]; // ACTUAL LOCATION
              // CHECK AS VISITED
@@ -53,7 +52,6 @@ int max_new_edges,curandState *state,int *NN_LIST,int *NEW_LIST,int *NEW_LIST_IN
             for (int k=1;k<cl;k++){
                     pos=NN_LIST[loc_act*cl+k];
                     prob[id*cl+k]=prob[id*cl+k-1]+HEURISTIC_PHEROMONE[loc_act*cl+k]*(float)(1-(int)(IS_VISITED(NEW_LIST,NEW_LIST_INDX,i,pos)));
-		    //printf("prob %.16f",HEURISTIC_PHEROMONE[loc_act*cl+k]);
             }
             float val =  curand_uniform(&localstate);
             float ranval=val*prob[id*cl+cl-1];
@@ -85,19 +83,17 @@ int max_new_edges,curandState *state,int *NN_LIST,int *NEW_LIST,int *NEW_LIST_IN
 		    pos_in_route = POS_IN_ROUTE[loc_act];
 		    u = (pos_in_route == 0) ? ROUTE_OP[N-1] : ROUTE_OP[pos_in_route-1];
 		    if (u != CHOSEN_NODE){
-			LS_CHECKLIST[i*(N+1)+new_edges]=CHOSEN_NODE; // I NEED TO CHANGE THIS, SAVE THE NODES
+			LS_CHECKLIST[i*(N+1)+new_edges]=CHOSEN_NODE; 
 			new_edges+=1;
-			LS_CHECKLIST[i*(N+1)+N]=new_edges; // I NEED TO CHANGE THIS, SAVE THE NODES
+			LS_CHECKLIST[i*(N+1)+N]=new_edges; 
 		    }
 		    if (new_edges>=max_new_edges){
 			pos_in_route=POS_IN_ROUTE[CHOSEN_NODE];
 			u = (pos_in_route == 0) ? ROUTE_OP[N-1] : ROUTE_OP[pos_in_route-1]; // THIS IS GOING BACKWARDS BECAUSE THE CHANGE ON THE ROUTE DATA STRUCTURE 
 			while (IS_VISITED(NEW_LIST,NEW_LIST_INDX,i,u)==false && j<N-1){
 			    CHECK_VISITED(NEW_LIST,NEW_LIST_INDX,i,u);
-			    if (loc_act == u)printf("\nERROR EN SOURCE %d",loc_act);
 			    loc_act=u;
 			    pos_in_route = POS_IN_ROUTE[u];
-                	    if(NEW_LIST[i*(N+1)+N]!=N-2-j)for(int r=0;r<1;r++)printf("\n SOURCE SYCC ERROR l %d c %d noden %d el j %d\n",i,u,NEW_LIST[i*(N+1)+N],j);
 			    j++; 
 			    POS_IN_ROUTE_ANT[i*N+u] = N - 1  - j;
 			    u = (pos_in_route == 0) ? ROUTE_OP[N-1] : ROUTE_OP[pos_in_route-1];
@@ -107,10 +103,8 @@ int max_new_edges,curandState *state,int *NN_LIST,int *NEW_LIST,int *NEW_LIST_IN
 			u = (pos_in_route == N-1) ? ROUTE_OP[0] : ROUTE_OP[pos_in_route+1];
 			while (IS_VISITED(NEW_LIST,NEW_LIST_INDX,i,u)==false && j<N-1){ 
 			    CHECK_VISITED(NEW_LIST,NEW_LIST_INDX,i,u);
-			    if (loc_act == u)printf("\nERROR EN SOURCE %d",loc_act);
 			    loc_act=u;
 			    pos_in_route = POS_IN_ROUTE[u];
-                	    if(NEW_LIST[i*(N+1)+N]!=N-2-j)for(int r=0;r<1;r++)printf("\nSOURCE PRED ERROR l %d c %d noden %d el j %d\n",i,u,NEW_LIST[i*(N+1)+N],j);
 			    j++;
 	    		    POS_IN_ROUTE_ANT[i*N+u] = N - 1 - j;
 			    u = (pos_in_route == N-1) ? ROUTE_OP[0] : ROUTE_OP[pos_in_route+1];
@@ -146,7 +140,7 @@ __device__ int GET_CANDIDATE(int *NEW_LIST,int *NEW_LIST_INDX,int ant,int j){
     return NEW_LIST[ant*(N+1)+j];
 }
 __global__ void LIST_INIT(int *d_NEW_LIST,int *d_NEW_LIST_INDX){
-    int j=blockIdx.x; // HERE, EVERY THREAD IS A CITY
+    int j=blockIdx.x; 
     if (j<N){
         for (int i=threadIdx.x;i<M;i+=blockDim.x){
 	if (i<M){
@@ -169,7 +163,6 @@ __global__ void ANT_COST_CALCULATION_LS(int *ROUTE,int *COST,float *NODE_COORDIN
             SUMA+=EUC_2D(NODE_COORDINATE_2D,ROUTE[i*(N+1)+j],ROUTE[i*(N+1)+(j+1)%N]);
         }
         COST[i]=SUMA;
-	for (j=0;j<LS_ITERATION;j++)opt3(ROUTE,NODE_COORDINATE_2D,COST,i,ROUTE_AUX,state);
     }
 }
 __global__ void ANT_COST_CALCULATION_FACO(int *ROUTE,int *COST,float *NODE_COORDINATE_2D,int *ROUTE_AUX,int *POS_IN_ROUTE,int *LS_CHECKLIST
@@ -182,7 +175,6 @@ __global__ void ANT_COST_CALCULATION_FACO(int *ROUTE,int *COST,float *NODE_COORD
             SUMA+=EUC_2D(NODE_COORDINATE_2D,ROUTE[i*(N+1)+j],ROUTE[i*(N+1)+(j+1)%N]);
         }
         COST[i]=SUMA;
-	//for (j=0;j<LS_ITERATION;j++)opt3(ROUTE,NODE_COORDINATE_2D,COST,i,ROUTE_AUX,state);
 	//OPT_2_FACO(ROUTE, POS_IN_ROUTE, COST, LS_CHECKLIST, NN_LIST,NODE_COORDINATE_2D,i);
 
     }
@@ -193,10 +185,8 @@ __global__ void PHEROMONE_UPDATE(int *ROUTE,int *BEST_ANT,float *PHEROMONE_MATRI
     int ant,k;
     for (ant=0;ant<n_best-1;ant++)
         for (k=0;k<cl;k++){
-            //printf("\n Wow %d \n",ROUTE[BEST_ANT[ant]*(N+1)+j+1]);
             if (ROUTE[BEST_ANT[ant]*(N+1)+(j+1)%N]==NN_LIST[ROUTE[BEST_ANT[ant]*(N+1)+j%N]*cl+k]){
                 PHEROMONE_MATRIX[ROUTE[BEST_ANT[ant]*(N+1)+j%N]*cl+k]+=(1.0*(n_best-1-ant))/((float)COST[ant]);
-                //printf("\n la suma %f",(1.0*(n_best-1-ant))/((float)COST[ant]););
             }
         }
     for (k=0;k<cl;k++){
@@ -212,10 +202,8 @@ __global__ void PHEROMONE_UPDATE_AS(int *ROUTE,int *BEST_ANT,float *PHEROMONE_MA
     int ant,k;
     for (ant=0;ant<M;ant++)
         for (k=0;k<cl;k++){
-            //printf("\n Wow %d \n",ROUTE[BEST_ANT[ant]*(N+1)+j+1]);
             if (ROUTE[BEST_ANT[ant]*(N+1)+(j+1)%N]==NN_LIST[ROUTE[BEST_ANT[ant]*(N+1)+j%N]*cl+k]){
                 PHEROMONE_MATRIX[ROUTE[BEST_ANT[ant]*(N+1)+j%N]*cl+k]+=(1.0)/((float)COST[ant]);
-                //printf("\n la suma %f",(1.0*(n_best-1-ant))/((float)COST[ant]););
             }
         }
     }
@@ -243,8 +231,8 @@ int BEST_GLOBAL_SOLUTION,int update_flag){
             	}
 
             }
+	    	
 	}
-
     }
 }
 __global__ void PHEROMONE_CHECK_MMAS(float *PHEROMONE_MATRIX,float tau_max,float tau_min){
@@ -298,155 +286,6 @@ __device__ int EUC_2D(float *d_d,int p1,int p2){
     dy=(d_d[p1*2+1]-d_d[p2*2+1]);
     return (int)(sqrt(dx*dx+dy*dy)+0.5);                
 }
-__device__ void opt3(int *ROUTE,float *NODE_COORDINATE_2D,int *COST,int k,int *ROUTE_AUX,curandState *state){
-    int pos[3]={};
-    curandState localstate=state[k];
-    for (int i=0;i<3;i++){
-        int aux =0;
-        while (aux==0){
-            aux=1;
-            float myrandf = curand_uniform(&localstate);
-            myrandf *= (N-2 - 1 + 0.999999);
-            myrandf += 1;
-            int random = (int)truncf(myrandf);
-            for (int j=0;j<3;j++){
-                if (random==pos[j]){
-                    aux=0;
-                }
-            }
-            if (aux==1){
-                pos[i]=random;
-            }
-        }
-    }
-    int temp;
-    state[k]=localstate;
-    if (pos[0]>pos[1]){
-        temp=pos[1];
-        pos[1]=pos[0];
-        pos[0]=temp;
-    } 
-    if (pos[0]>pos[2]){
-        temp=pos[2];
-        pos[2]=pos[0];
-        pos[0]=temp;
-    }
-    if (pos[1]>pos[2]){
-        temp=pos[2];
-        pos[2]=pos[1];
-        pos[1]=temp;
-    }  
-    int delta0=pos[1]-pos[0];int delta1=pos[2]-pos[1];int aux=0; int d0,d1,d2,d3,d4,d5,d6,d7,change1,change2,change3,change4,change5,change6,change7;
-    
-    
-    
-    d0=EUC_2D(NODE_COORDINATE_2D,ROUTE[k*(N+1)+pos[0]-1],ROUTE[k*(N+1)+pos[0]]) +
-       EUC_2D(NODE_COORDINATE_2D,ROUTE[k*(N+1)+pos[1]-1],ROUTE[k*(N+1)+pos[1]]) +  
-       EUC_2D(NODE_COORDINATE_2D,ROUTE[k*(N+1)+pos[2]-1],ROUTE[k*(N+1)+pos[2]]);
-
-    
-    
-    d1=EUC_2D(NODE_COORDINATE_2D,ROUTE[k*(N+1)+pos[0]-1],ROUTE[k*(N+1)+pos[1]-1]) + //
-       EUC_2D(NODE_COORDINATE_2D,ROUTE[k*(N+1)+pos[0]],ROUTE[k*(N+1)+pos[1]])     +  //
-       EUC_2D(NODE_COORDINATE_2D,ROUTE[k*(N+1)+pos[2]-1],ROUTE[k*(N+1)+pos[2]]);  //
-    change1=d1-d0;
-    
-    
-    d2=EUC_2D(NODE_COORDINATE_2D,ROUTE[k*(N+1)+pos[2]-1],ROUTE[k*(N+1)+pos[0]-1]) +//
-       EUC_2D(NODE_COORDINATE_2D,ROUTE[k*(N+1)+pos[1]-1],ROUTE[k*(N+1)+pos[1]])   +// 
-       EUC_2D(NODE_COORDINATE_2D,ROUTE[k*(N+1)+pos[2]],ROUTE[k*(N+1)+pos[0]]);     //
-    change2=d2-d0;
-    
-    d3=EUC_2D(NODE_COORDINATE_2D,ROUTE[k*(N+1)+pos[0]-1],ROUTE[k*(N+1)+pos[0]])   +//
-       EUC_2D(NODE_COORDINATE_2D,ROUTE[k*(N+1)+pos[1]-1],ROUTE[k*(N+1)+pos[2]-1]) +// 
-       EUC_2D(NODE_COORDINATE_2D,ROUTE[k*(N+1)+pos[1]],ROUTE[k*(N+1)+pos[2]]);     //
-    change3=d3-d0;
-    
-    d4=EUC_2D(NODE_COORDINATE_2D,ROUTE[k*(N+1)+pos[0]-1],ROUTE[k*(N+1)+pos[1]])   +//
-       EUC_2D(NODE_COORDINATE_2D,ROUTE[k*(N+1)+pos[2]-1],ROUTE[k*(N+1)+pos[1]-1]) +// 
-       EUC_2D(NODE_COORDINATE_2D,ROUTE[k*(N+1)+pos[0]],ROUTE[k*(N+1)+pos[2]]);     //
-    change4=d4-d0;
-    
-    d5=EUC_2D(NODE_COORDINATE_2D,ROUTE[k*(N+1)+pos[0]-1],ROUTE[k*(N+1)+pos[1]-1]) +//
-       EUC_2D(NODE_COORDINATE_2D,ROUTE[k*(N+1)+pos[0]],ROUTE[k*(N+1)+pos[2]-1])   +// 
-       EUC_2D(NODE_COORDINATE_2D,ROUTE[k*(N+1)+pos[1]],ROUTE[k*(N+1)+pos[2]]);     //
-    change5=d5-d0;
-    
-    d6=EUC_2D(NODE_COORDINATE_2D,ROUTE[k*(N+1)+pos[2]-1],ROUTE[k*(N+1)+pos[0]-1]) +//
-       EUC_2D(NODE_COORDINATE_2D,ROUTE[k*(N+1)+pos[2]],ROUTE[k*(N+1)+pos[1]-1])   +// 
-       EUC_2D(NODE_COORDINATE_2D,ROUTE[k*(N+1)+pos[0]],ROUTE[k*(N+1)+pos[1]]);     //
-    change6=d6-d0;        
-    
-    d7=EUC_2D(NODE_COORDINATE_2D,ROUTE[k*(N+1)+pos[1]],ROUTE[k*(N+1)+pos[0]-1]) +//
-       EUC_2D(NODE_COORDINATE_2D,ROUTE[k*(N+1)+pos[2]-1],ROUTE[k*(N+1)+pos[0]])   +// 
-       EUC_2D(NODE_COORDINATE_2D,ROUTE[k*(N+1)+pos[1]-1],ROUTE[k*(N+1)+pos[2]]);     //
-    change7=d7-d0;
-
-
-    change7=d7-d0;                
-    if (d0>d1){d0=d1;aux=1;}if (d0>d2){d0=d2;aux=2;}//if (d0>d3){d0=d3;aux=3;}
-    if (d0>d4){d0=d4;aux=4;}if (d0>d5){d0=d5;aux=5;}if (d0>d6){d0=d6;aux=6;}
-    if (d0>d7){d0=d7;aux=7;}
-    if (aux==1){
-    for (int i=0;i<pos[0];i++)ROUTE_AUX[k*(N+1)+i]=ROUTE[(N+1)*k+i]; 
-    for (int i=0;i<delta0;i++)ROUTE_AUX[k*(N+1)+i+pos[0]]=ROUTE[(N+1)*k+pos[1]-i-1];
-    for (int i=0;i<delta1;i++)ROUTE_AUX[k*(N+1)+i+pos[0]+delta0]=ROUTE[(N+1)*k+pos[1]+i];
-    for (int i=pos[2];i<N;i++)ROUTE_AUX[k*(N+1)+i]=ROUTE[(N+1)*k+i];
-    //printf(" caso 1 a' b c\n");for (int i=0;i<N+1;i++)printf("%d ",ROUTE_AUX[k*(N+1)+i]+1);
-    for (int i=0;i<N;i++)ROUTE[(N+1)*k+i]=ROUTE_AUX[k*(N+1)+i];
-    COST[k]+=change1;if(COST[k]<solucion)printf("\n HAY QUESO 1\n");
-    
-    }if (aux==2){
-    for (int i=0;i<pos[0];i++)ROUTE_AUX[k*(N+1)+i]=ROUTE[(N+1)*k+i]; 
-    for (int i=0;i<delta1;i++)ROUTE_AUX[k*(N+1)+i+pos[0]]=ROUTE[(N+1)*k+pos[2]-i-1];
-    for (int i=0;i<delta0;i++)ROUTE_AUX[k*(N+1)+i+delta1+pos[0]]=ROUTE[(N+1)*k+pos[1]-i-1];
-    for (int i=pos[2];i<N;i++)ROUTE_AUX[k*(N+1)+i]=ROUTE[(N+1)*k+i];
-    //printf("\n caso 2 a b c' \n");for (int i=0;i<N+1;i++)printf("%d ",ROUTE_AUX[k*(N+1)+i]+1);
-    for (int i=0;i<N;i++)ROUTE[(N+1)*k+i]=ROUTE_AUX[k*(N+1)+i];
-    COST[k]+=change2;if(COST[k]<solucion)printf("\n HAY QUESO 2\n");
-    }if (aux==3){
-    for (int i=0;i<pos[0];i++)ROUTE_AUX[k*(N+1)+i]=ROUTE[(N+1)*k+i]; 
-    for (int i=0;i<delta0;i++)ROUTE_AUX[k*(N+1)+i+pos[0]]=ROUTE[(N+1)*k+pos[0]+i];
-    for (int i=0;i<delta1;i++)ROUTE_AUX[k*(N+1)+i+pos[0]+delta0]=ROUTE[(N+1)*k+pos[2]-i-1];
-    for (int i=pos[2];i<N;i++)ROUTE_AUX[k*(N+1)+i]=ROUTE[(N+1)*k+i];
-    //printf("\n caso 3 a b' c \n");for (int i=0;i<N+1;i++)printf("%d ",ROUTE_AUX[k*(N+1)+i]+1);
-    for (int i=0;i<N;i++)ROUTE[(N+1)*k+i]=ROUTE_AUX[k*(N+1)+i];
-    COST[k]+=change3;if(COST[k]<solucion)printf("\n HAY QUESO 3\n");
-    }if (aux==4){
-    for (int i=0;i<pos[0];i++)ROUTE_AUX[k*(N+1)+i]=ROUTE[(N+1)*k+i]; 
-    for (int i=0;i<delta1;i++)ROUTE_AUX[k*(N+1)+i+pos[0]]=ROUTE[(N+1)*k+pos[1]+i];
-    for (int i=0;i<delta0;i++)ROUTE_AUX[k*(N+1)+i+pos[0]+delta1]=ROUTE[(N+1)*k+pos[1]-i-1];
-    for (int i=pos[2];i<N;i++)ROUTE_AUX[k*(N+1)+i]=ROUTE[(N+1)*k+i];
-    //printf("\n caso 4 a' c b \n");for (int i=0;i<N+1;i++)printf("%d ",ROUTE_AUX[k*(N+1)+i]+1);
-    for (int i=0;i<N;i++)ROUTE[(N+1)*k+i]=ROUTE_AUX[k*(N+1)+i];
-    COST[k]+=change4;if(COST[k]<solucion)printf("\n HAY QUESO 4\n");
-    }if (aux==5){
-    for (int i=0;i<pos[0];i++)ROUTE_AUX[k*(N+1)+i]=ROUTE[(N+1)*k+i]; 
-    for (int i=0;i<delta0;i++)ROUTE_AUX[k*(N+1)+i+pos[0]]=ROUTE[(N+1)*k+pos[1]-i-1];
-    for (int i=0;i<delta1;i++)ROUTE_AUX[k*(N+1)+i+pos[0]+delta0]=ROUTE[(N+1)*k+pos[2]-i-1];
-    for (int i=pos[2];i<N;i++)ROUTE_AUX[k*(N+1)+i]=ROUTE[(N+1)*k+i];
-    //printf("\n caso 5 a' b' c \n");for (int i=0;i<N+1;i++)printf("%d ",ROUTE_AUX[k*(N+1)+i]+1);
-    for (int i=0;i<N;i++)ROUTE[(N+1)*k+i]=ROUTE_AUX[k*(N+1)+i];
-    COST[k]+=change5;if(COST[k]<solucion)printf("\n HAY QUESO 5\n");
-    }if (aux==6){
-    for (int i=0;i<pos[0];i++)ROUTE_AUX[k*(N+1)+i]=ROUTE[(N+1)*k+i]; 
-    for (int i=0;i<delta1;i++)ROUTE_AUX[k*(N+1)+i+pos[0]]=ROUTE[(N+1)*k+pos[2]-i-1];
-    for (int i=0;i<delta0;i++)ROUTE_AUX[k*(N+1)+i+pos[0]+delta1]=ROUTE[(N+1)*k+pos[0]+i];
-    for (int i=pos[2];i<N;i++)ROUTE_AUX[k*(N+1)+i]=ROUTE[(N+1)*k+i];
-    //printf("\n caso 6 a' b c \n");for (int i=0;i<N+1;i++)printf("%d ",ROUTE_AUX[k*(N+1)+i]+1);
-    for (int i=0;i<N;i++)ROUTE[(N+1)*k+i]=ROUTE_AUX[k*(N+1)+i];
-    COST[k]+=change6;if(COST[k]<solucion)printf("\n HAY QUESO 6\n");
-    }if (aux==7){
-    for (int i=0;i<pos[0];i++)ROUTE_AUX[k*(N+1)+i]=ROUTE[(N+1)*k+i]; 
-    for (int i=0;i<delta1;i++)ROUTE_AUX[k*(N+1)+i+pos[0]]=ROUTE[(N+1)*k+pos[1]+i];
-    for (int i=0;i<delta0;i++)ROUTE_AUX[k*(N+1)+i+pos[0]+delta1]=ROUTE[(N+1)*k+pos[0]+i];
-    for (int i=pos[2];i<N;i++)ROUTE_AUX[k*(N+1)+i]=ROUTE[(N+1)*k+i];
-    //printf("\n caso 7 a c b \n");for (int i=0;i<N+1;i++)printf("%d ",ROUTE_AUX[k*(N+1)+i]+1);
-    for (int i=0;i<N;i++)ROUTE[(N+1)*k+i]=ROUTE_AUX[k*(N+1)+i];
-    COST[k]+=change7;if(COST[k]<solucion)printf("\n HAY QUESO 7\n");
-    }
-    //printf("\n");
-}
 void make_candidate_list(int *d_NN_LIST_aux,int *d_DISTANCE_NODE,int *DISTANCE_NODE,float *NODE_COORDINATE_2D,int *NN_LIST_cl){
     int i,j;
     thrust::device_ptr<int> dev_inx_d = thrust::device_pointer_cast(d_NN_LIST_aux);
@@ -475,7 +314,7 @@ void UPGRADE_PHEROMONE(int *ROUTE,int *BEST_ANT,float *PHEROMONE_MATRIX,int *NN_
 	EVAPORATION<<<((N*cl+32-(N*cl%32)))/32,32>>>(PHEROMONE_MATRIX,e);
 	if (ACO_flag == 0){
 	    // RBAS
-            PHEROMONE_UPDATE<<<((N+16-(N%16)))/16,16>>>(ROUTE,BEST_ANT,PHEROMONE_MATRIX,NN_LIST,COST,OPTIMAL_ROUTE,BEST_GLOBAL_SOLUTION); 
+            PHEROMONE_UPDATE<<<((N+32-(N%32)))/32,32>>>(ROUTE,BEST_ANT,PHEROMONE_MATRIX,NN_LIST,COST,OPTIMAL_ROUTE,BEST_GLOBAL_SOLUTION); 
 	}
 	else if (ACO_flag == 1){	
             // MMAS
@@ -484,17 +323,17 @@ void UPGRADE_PHEROMONE(int *ROUTE,int *BEST_ANT,float *PHEROMONE_MATRIX,int *NN_
             int MMAS_flag = (randu<0.1) ? 1 : 0 ;
 	    PHEROMONE_CHECK_MMAS<<<((N*cl+32-(N*cl%32)))/32,32>>>(PHEROMONE_MATRIX, tau_max, tau_min);
             
-	    PHEROMONE_UPDATE_MMAS<<<((N+16-(N%16)))/16,16>>>(ROUTE,BEST_ANT,PHEROMONE_MATRIX,NN_LIST,COST,OPTIMAL_ROUTE,BEST_GLOBAL_SOLUTION,MMAS_flag); 
+	    PHEROMONE_UPDATE_MMAS<<<((N+32-(N%32)))/32,32>>>(ROUTE,BEST_ANT,PHEROMONE_MATRIX,NN_LIST,COST,OPTIMAL_ROUTE,BEST_GLOBAL_SOLUTION,MMAS_flag); 
 
 	    PHEROMONE_CHECK_MMAS<<<((N*cl+32-(N*cl%32)))/32,32>>>(PHEROMONE_MATRIX, tau_max, tau_min);
 	}
 	else if (ACO_flag == 2){
 	    // AS
-	    PHEROMONE_UPDATE_AS<<<((N+16-(N%16)))/16,16>>>(ROUTE,BEST_ANT,PHEROMONE_MATRIX,NN_LIST,COST,OPTIMAL_ROUTE,BEST_GLOBAL_SOLUTION); 
+	    PHEROMONE_UPDATE_AS<<<((N+32-(N%32)))/32,32>>>(ROUTE,BEST_ANT,PHEROMONE_MATRIX,NN_LIST,COST,OPTIMAL_ROUTE,BEST_GLOBAL_SOLUTION); 
 
 	}
 	else{
-		printf("\n ERROR ELEGIR ALGORITMO ACO \n");
+		printf("\n Not suported ACO \n");
 		exit(1);
 	}
 }
@@ -573,44 +412,22 @@ __device__ void OPT_2_FACO(int *ROUTE, int *POS_IN_ROUTE_ANT, int *COST, int *LS
 			if (pos_in_route_n_move_1 > pos_in_route_n_move_2) swap(&pos_in_route_n_move_1,&pos_in_route_n_move_2);
 			int delta = floor((float) (pos_in_route_n_move_2-pos_in_route_n_move_1)/2.0);
 			if (flag_2opt == 0){
-				//printf("bandera %d \n",flag_2opt);
-				//printf("Antes del cambio mov %d y %d \n", move[0],move[1]);
-				//printf("Antes del cambio pos %d y %d \n", pos_in_route_n_move_1,pos_in_route_n_move_2);
-				//for (k = 0; k < N;k++)printf("\033[22;34m%d \033[0m", k);
-				//printf("\n");
-				//for (k = 0; k < N;k++)printf("%d ", ROUTE[ROUTE_OFFSET+k]);
 				for (k = 0; k < delta; k++){
 					int current_change_x2 = pos_in_route_n_move_2-k-1; 
 					int current_change_x1 = pos_in_route_n_move_1+k; 
 					make_swap_move_route(current_change_x1,current_change_x2,ROUTE,POS_IN_ROUTE_ANT,
 					ROUTE_OFFSET,POS_IN_R_OFFSET);	
 				}
-				//printf("\n");
-				//printf("Despúes del cambio \n");
-				//for (k = 0; k < N;k++)printf("%d ", ROUTE[ROUTE_OFFSET+k]);
 				COST[ANT]-=gain;
-				//printf("con cost = %d \n",COST[ANT]);
-				// unos print para debugear
 			}
 			if (flag_2opt == 1){
-				//printf("bandera %d \n",flag_2opt);
-				//printf("Antes del cambio mov %d y %d \n", move[0],move[1]);
-				//printf("Antes del cambio pos %d y %d \n", pos_in_route_n_move_1,pos_in_route_n_move_2);
-				//for (k = 0; k < N;k++)printf("\033[22;34m%d \033[0m", k);
-				//printf("\n");
-				//for (k = 0; k < N;k++)printf("%d ", ROUTE[ROUTE_OFFSET+k]);
 				for (k = 0; k < delta; k++){
 					int current_change_x2 = pos_in_route_n_move_2-k; 
 					int current_change_x1 = pos_in_route_n_move_1+k+1; 
 					make_swap_move_route(current_change_x1,current_change_x2,ROUTE,POS_IN_ROUTE_ANT,
 					ROUTE_OFFSET,POS_IN_R_OFFSET);	
 				}
-				//printf("\n");
-				//printf("Despúes del cambio \n");
-				//for (k = 0; k < N;k++)printf("%d ", ROUTE[ROUTE_OFFSET+k]);
 				COST[ANT]-=gain;
-				//printf("con cost = %d \n",COST[ANT]);
-				//printf("con gain = %d \n",gain);
 				
 			}
 		}
@@ -690,44 +507,22 @@ void OPT_2_nn(int *ROUTE, int *POS_IN_ROUTE_ANT, int *COST,int *NN_LIST,float *N
 			if (pos_in_route_n_move_1 > pos_in_route_n_move_2) swap_c(&pos_in_route_n_move_1,&pos_in_route_n_move_2);
 			int delta = floor((float) (pos_in_route_n_move_2-pos_in_route_n_move_1)/2.0);
 			if (flag_2opt == 0){
-				//printf("bandera %d \n",flag_2opt);
-				//printf("Antes del cambio mov %d y %d \n", move[0],move[1]);
-				//printf("Antes del cambio pos %d y %d \n", pos_in_route_n_move_1,pos_in_route_n_move_2);
-				//for (k = 0; k < N;k++)printf("\033[22;34m%d \033[0m", k);
-				//printf("\n");
-				//for (k = 0; k < N;k++)printf("%d ", ROUTE[ROUTE_OFFSET+k]);
 				for (k = 0; k < delta; k++){
 					int current_change_x2 = pos_in_route_n_move_2-k-1; 
 					int current_change_x1 = pos_in_route_n_move_1+k; 
 					make_swap_move_route_c(current_change_x1,current_change_x2,ROUTE,POS_IN_ROUTE_ANT,
 					ROUTE_OFFSET,POS_IN_R_OFFSET);	
 				}
-				//printf("\n");
-				//printf("Despúes del cambio \n");
-				//for (k = 0; k < N;k++)printf("%d ", ROUTE[ROUTE_OFFSET+k]);
 				COST[ANT]-=gain;
-				//printf("con cost = %d \n",COST[ANT]);
-				// unos print para debugear
 			}
 			if (flag_2opt == 1){
-				//printf("bandera %d \n",flag_2opt);
-				//printf("Antes del cambio mov %d y %d \n", move[0],move[1]);
-				//printf("Antes del cambio pos %d y %d \n", pos_in_route_n_move_1,pos_in_route_n_move_2);
-				//for (k = 0; k < N;k++)printf("\033[22;34m%d \033[0m", k);
-				//printf("\n");
-				//for (k = 0; k < N;k++)printf("%d ", ROUTE[ROUTE_OFFSET+k]);
 				for (k = 0; k < delta; k++){
 					int current_change_x2 = pos_in_route_n_move_2-k; 
 					int current_change_x1 = pos_in_route_n_move_1+k+1; 
 					make_swap_move_route_c(current_change_x1,current_change_x2,ROUTE,POS_IN_ROUTE_ANT,
 					ROUTE_OFFSET,POS_IN_R_OFFSET);	
 				}
-				//printf("\n");
-				//printf("Despúes del cambio \n");
-				//for (k = 0; k < N;k++)printf("%d ", ROUTE[ROUTE_OFFSET+k]);
 				COST[ANT]-=gain;
-				//printf("con cost = %d \n",COST[ANT]);
-				//printf("con gain = %d \n",gain);
 				
 			}
 		}
